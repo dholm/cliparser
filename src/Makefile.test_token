@@ -27,7 +27,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 SRC_BASE = ..
-SRC_FILES = parser_token.c parser_token_tbl.c test_token.c
+SRC_FILES = cparser_token.c cparser_token_tbl.c test_token.c
 SRC_BIN = test_token
 
 include $(SRC_BASE)/rules.mk

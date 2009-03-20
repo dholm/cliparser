@@ -29,17 +29,17 @@
 CLI_FLAGS += -D TEST_LABEL1
 
 SRC_BASE = ..
-SRC_FILES = parser.c parser_token.c parser_token_tbl.c parser_io_unix.c parser_fsm.c parser_line.c
-SRC_FILES += parser_tree_$(PLATFORM).c test_cli_cmd.c test_parser.c
+SRC_FILES = cparser.c cparser_token.c cparser_token_tbl.c cparser_io_unix.c cparser_fsm.c cparser_line.c
+SRC_FILES += cparser_tree_$(PLATFORM).c test_cli_cmd.c test_parser.c
 SRC_INC += -I $(PLATFORM)/
 SRC_BIN = test_parser
 VPATH += $(PLATFORM)/
 
-parser_tree_$(PLATFORM).c: test.cli test_included.cli
+cparser_tree_$(PLATFORM).c: test.cli test_included.cli
 	$(SRC_BASE)/scripts/mk_parser.py $(CLI_FLAGS) test.cli
 	mkdir -p $(PLATFORM)
-	mv parser_tree.c parser_tree_$(PLATFORM).c
-	mv parser_tree.h $(PLATFORM)/
+	mv cparser_tree.c cparser_tree_$(PLATFORM).c
+	mv cparser_tree.h $(PLATFORM)/
 
 include $(SRC_BASE)/rules.mk
 

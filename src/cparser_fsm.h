@@ -1,7 +1,7 @@
 /**
- * \file     parser_priv.h
- * \brief    Private parser definitions.
- * \version  \verbatim $Id: parser_priv.h 51 2009-03-12 22:33:20Z henry $ \endverbatim
+ * \file     cparser_fsm.h
+ * \brief    Parser state machine definitions and prototype.
+ * \version  \verbatim $Id: cparser_fsm.h 72 2009-03-19 07:30:35Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -30,29 +30,46 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __PARSER_PRIV_H__
-#define __PARSER_PRIV_H__
+#ifndef __CPARSER_FSM_H__
+#define __CPARSER_FSM_H__
 
-#include "parser.h"
-#include "parser_token.h"
+#include "cparser.h"
+
+#define CUR_TOKEN(p) (&((p)->tokens[(p)->token_tos]))
 
 /**
- * A node in the parser tree. It has a node type which determines
- * what type of token is accepted.
+ * Reset all parser FSM states.
+ *
+ * \param    parser Pointer to the parser structure.
+ *
+ * \return   None.
  */
-struct parser_node_ {
-    parser_node_type_t   type;
-    uint32_t             flags;
-    void                 *param;
-    char                 *desc;
-    parser_node_t        *sibling;
-    parser_node_t        *children;
-};
+void cparser_fsm_reset(cparser_t *parser);
 
-#define PARSER_NODE_FLAGS_OPT_START          (1 << 0)
-#define PARSER_NODE_FLAGS_OPT_END            (1 << 1)
-#define PARSER_NODE_FLAGS_OPT_PARTIAL        (1 << 2)
+/**
+ * Input a character to parser FSM.
+ *
+ * \param    parser Pointer to the parser structure.
+ * \param    ch     Input character.
+ *
+ * \return   CPARSER_OK if succeeded; CPARSER_NOT_OK otherwise.
+ */
+cparser_result_t cparser_fsm_input(cparser_t *parser, char ch);
 
-#define VALID_PARSER(p)  (p)
+/**
+ * Walk through all children of a node. Return a match node if one is found.
+ *
+ * \param    token     Pointer to the beginning of the token.
+ * \param    token_len Length of the token.
+ * \param    parent    Pointer to the parent node.
+ *
+ * \retval   match       Pointer to a node that matches the token.
+ *                       If there are multiple matches, the highest priority match
+ *                       is returned.
+ * \retval   is_complete 1 if the token completely matches 
+ * \return   Number of matches.
+ */
+int cparser_match(const char *token, const int token_len, cparser_node_t *parent,
+                  cparser_node_t **match, int *is_complete);
 
-#endif /* __PARSER_PRIV_H__ */
+#endif /* __CPARSER_FSM_H__ */

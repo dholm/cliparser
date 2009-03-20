@@ -1,7 +1,7 @@
 /**
  * \file     test_token.c
  * \brief    Test program for verifying token parsing routines.
- * \version  \verbatim $Id: test_token.c 51 2009-03-12 22:33:20Z henry $ \endverbatim
+ * \version  \verbatim $Id: test_token.c 62 2009-03-15 22:09:50Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -34,9 +34,9 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include "parser.h"
-#include "parser_priv.h"
-#include "parser_token.h"
+#include "cparser.h"
+#include "cparser_priv.h"
+#include "cparser_token.h"
 
 #define NELEM(a) (sizeof(a)/sizeof(a[0]))
 
@@ -45,88 +45,88 @@ int main (int argc, char *argv[])
     struct {
         char               *name;
         char               *str;
-        parser_node_type_t type;
+        cparser_node_type_t type;
         char               *param;
-        parser_result_t    result;
+        cparser_result_t    result;
         int                is_complete;
     } match_testcases[] = {
         /* Keyword */
-        { "KW01", "s", PARSER_NODE_KEYWORD, "show", PARSER_OK, 0 },
-        { "KW02", "sh", PARSER_NODE_KEYWORD, "show", PARSER_OK, 0 },
-        { "KW03", "sho", PARSER_NODE_KEYWORD, "show", PARSER_OK, 0 },
-        { "KW04", "show", PARSER_NODE_KEYWORD, "show", PARSER_OK, 1 },
-        { "KW05", "shows", PARSER_NODE_KEYWORD, "show", PARSER_NOT_OK, 0 },
-        { "KW06", "how", PARSER_NODE_KEYWORD, "show", PARSER_NOT_OK, 0 },
+        { "KW01", "s", CPARSER_NODE_KEYWORD, "show", CPARSER_OK, 0 },
+        { "KW02", "sh", CPARSER_NODE_KEYWORD, "show", CPARSER_OK, 0 },
+        { "KW03", "sho", CPARSER_NODE_KEYWORD, "show", CPARSER_OK, 0 },
+        { "KW04", "show", CPARSER_NODE_KEYWORD, "show", CPARSER_OK, 1 },
+        { "KW05", "shows", CPARSER_NODE_KEYWORD, "show", CPARSER_NOT_OK, 0 },
+        { "KW06", "how", CPARSER_NODE_KEYWORD, "show", CPARSER_NOT_OK, 0 },
         /* String */
-        { "STR01", "abc", PARSER_NODE_STRING, "s", PARSER_OK, 1 },
-        { "STR02", "1234", PARSER_NODE_STRING, "s", PARSER_OK, 1 },
+        { "STR01", "abc", CPARSER_NODE_STRING, "s", CPARSER_OK, 1 },
+        { "STR02", "1234", CPARSER_NODE_STRING, "s", CPARSER_OK, 1 },
         /* Unsigned integer */
-        { "UINT01", "1xabc", PARSER_NODE_UINT, "a", PARSER_NOT_OK, 0 },
-        { "UINT02", "0xabc", PARSER_NODE_UINT, "a", PARSER_OK, 1 },
-        { "UINT03", "01234", PARSER_NODE_UINT, "a", PARSER_OK, 1 },
-        { "UINT04", "012abc", PARSER_NODE_UINT, "a", PARSER_NOT_OK, 0 },
-        { "UINT05", "0x", PARSER_NODE_UINT, "a", PARSER_OK, 0 },
-        { "UINT06", "1x", PARSER_NODE_UINT, "a", PARSER_NOT_OK, 0 },
+        { "UINT01", "1xabc", CPARSER_NODE_UINT, "a", CPARSER_NOT_OK, 0 },
+        { "UINT02", "0xabc", CPARSER_NODE_UINT, "a", CPARSER_OK, 1 },
+        { "UINT03", "01234", CPARSER_NODE_UINT, "a", CPARSER_OK, 1 },
+        { "UINT04", "012abc", CPARSER_NODE_UINT, "a", CPARSER_NOT_OK, 0 },
+        { "UINT05", "0x", CPARSER_NODE_UINT, "a", CPARSER_OK, 0 },
+        { "UINT06", "1x", CPARSER_NODE_UINT, "a", CPARSER_NOT_OK, 0 },
         /* Signed integer */
-        { "INT01", "123", PARSER_NODE_INT, "a", PARSER_OK, 1 },
-        { "INT02", "9876543210", PARSER_NODE_INT, "a", PARSER_OK, 1},
-        { "INT03", "abc", PARSER_NODE_INT, "a", PARSER_NOT_OK, 0 },
-        { "INT04", "-980", PARSER_NODE_INT, "a", PARSER_OK, 1 },
-        { "INT05", "-", PARSER_NODE_INT, "a", PARSER_OK, 0 },
-        { "INT06", "+", PARSER_NODE_INT, "a", PARSER_OK, 0 },
-        { "INT07", "+5678", PARSER_NODE_INT, "a", PARSER_OK, 1 },
-        { "INT08", "1324-80", PARSER_NODE_INT, "a", PARSER_NOT_OK, 0 },
+        { "INT01", "123", CPARSER_NODE_INT, "a", CPARSER_OK, 1 },
+        { "INT02", "9876543210", CPARSER_NODE_INT, "a", CPARSER_OK, 1},
+        { "INT03", "abc", CPARSER_NODE_INT, "a", CPARSER_NOT_OK, 0 },
+        { "INT04", "-980", CPARSER_NODE_INT, "a", CPARSER_OK, 1 },
+        { "INT05", "-", CPARSER_NODE_INT, "a", CPARSER_OK, 0 },
+        { "INT06", "+", CPARSER_NODE_INT, "a", CPARSER_OK, 0 },
+        { "INT07", "+5678", CPARSER_NODE_INT, "a", CPARSER_OK, 1 },
+        { "INT08", "1324-80", CPARSER_NODE_INT, "a", CPARSER_NOT_OK, 0 },
         /* Hexadecimal */
-        { "HEX01", "0x78abcdef", PARSER_NODE_HEX, "a", PARSER_OK, 1 },
-        { "HEX02", "0x0123456", PARSER_NODE_HEX, "a", PARSER_OK, 1 },
-        { "HEX03", "1x1234", PARSER_NODE_HEX, "a", PARSER_NOT_OK, 0 },
-        { "HEX04", "0x", PARSER_NODE_HEX, "a", PARSER_OK, 0 },
-        { "HEX05", "0xyz", PARSER_NODE_HEX, "a", PARSER_NOT_OK, 0 },
+        { "HEX01", "0x78abcdef", CPARSER_NODE_HEX, "a", CPARSER_OK, 1 },
+        { "HEX02", "0x0123456", CPARSER_NODE_HEX, "a", CPARSER_OK, 1 },
+        { "HEX03", "1x1234", CPARSER_NODE_HEX, "a", CPARSER_NOT_OK, 0 },
+        { "HEX04", "0x", CPARSER_NODE_HEX, "a", CPARSER_OK, 0 },
+        { "HEX05", "0xyz", CPARSER_NODE_HEX, "a", CPARSER_NOT_OK, 0 },
         /* Float */
         /* MAC address */
-        { "MAC01", "0", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 0 },
-        { "MAC02", "00", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 0 },
-        { "MAC03", "00:", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 0 },
-        { "MAC04", "00:1", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 0 },
-        { "MAC05", "00:11", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 0 },
-        { "MAC06", "00:11:", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 0 },
-        { "MAC07", "00:11:9", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 0 },
-        { "MAC08", "00:11:99", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 0 },
-        { "MAC09", "00:11:99:", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 0 },
-        { "MAC10", "00:11:99:a", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 0 },
-        { "MAC11", "00:11:99:aa", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 0 },
-        { "MAC12", "00:11:99:aa:", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 0 },
-        { "MAC13", "00:11:99:aa:C", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 0 },
-        { "MAC14", "00:11:99:aa:CC", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 0 },
-        { "MAC15", "00:11:99:aa:CC:", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 0 },
-        { "MAC16", "00:11:99:aa:CC:F", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 1 },
-        { "MAC17", "00:11:99:aa:CC:Ff", PARSER_NODE_MACADDR, "macaddr", PARSER_OK, 1 },
-        { "MAC18", "xx:yy:zz:pp:qq:rr", PARSER_NODE_MACADDR, "macaddr", PARSER_NOT_OK, 0 },
+        { "MAC01", "0", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
+        { "MAC02", "00", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
+        { "MAC03", "00:", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
+        { "MAC04", "00:1", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
+        { "MAC05", "00:11", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
+        { "MAC06", "00:11:", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
+        { "MAC07", "00:11:9", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
+        { "MAC08", "00:11:99", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
+        { "MAC09", "00:11:99:", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
+        { "MAC10", "00:11:99:a", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
+        { "MAC11", "00:11:99:aa", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
+        { "MAC12", "00:11:99:aa:", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
+        { "MAC13", "00:11:99:aa:C", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
+        { "MAC14", "00:11:99:aa:CC", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
+        { "MAC15", "00:11:99:aa:CC:", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
+        { "MAC16", "00:11:99:aa:CC:F", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 1 },
+        { "MAC17", "00:11:99:aa:CC:Ff", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 1 },
+        { "MAC18", "xx:yy:zz:pp:qq:rr", CPARSER_NODE_MACADDR, "macaddr", CPARSER_NOT_OK, 0 },
         /* IP address */
-        { "IP4_01", "1", PARSER_NODE_IPV4ADDR, "ipv4", PARSER_OK, 0 },
-        { "IP4_02", "10.", PARSER_NODE_IPV4ADDR, "ipv4", PARSER_OK, 0 },
-        { "IP4_03", "10.123", PARSER_NODE_IPV4ADDR, "ipv4", PARSER_OK, 0 },
-        { "IP4_04", "10.123.0.", PARSER_NODE_IPV4ADDR, "ipv4", PARSER_OK, 0 },
-        { "IP4_05", "10.123.0.1", PARSER_NODE_IPV4ADDR, "ipv4", PARSER_OK, 1 },
-        { "IP4_06", "10.123.0.13", PARSER_NODE_IPV4ADDR, "ipv4", PARSER_OK, 1 },
-        { "IP4_07", "1234.1.1.1", PARSER_NODE_IPV4ADDR, "ipv4", PARSER_NOT_OK, 0 },
-        { "IP4_08", "1.2.3.3.4.5", PARSER_NODE_IPV4ADDR, "ipv4", PARSER_NOT_OK, 0 },
-        { "IP4_09", "a.b.c.d", PARSER_NODE_IPV4ADDR, "ipv4", PARSER_NOT_OK, 0 },
+        { "IP4_01", "1", CPARSER_NODE_IPV4ADDR, "ipv4", CPARSER_OK, 0 },
+        { "IP4_02", "10.", CPARSER_NODE_IPV4ADDR, "ipv4", CPARSER_OK, 0 },
+        { "IP4_03", "10.123", CPARSER_NODE_IPV4ADDR, "ipv4", CPARSER_OK, 0 },
+        { "IP4_04", "10.123.0.", CPARSER_NODE_IPV4ADDR, "ipv4", CPARSER_OK, 0 },
+        { "IP4_05", "10.123.0.1", CPARSER_NODE_IPV4ADDR, "ipv4", CPARSER_OK, 1 },
+        { "IP4_06", "10.123.0.13", CPARSER_NODE_IPV4ADDR, "ipv4", CPARSER_OK, 1 },
+        { "IP4_07", "1234.1.1.1", CPARSER_NODE_IPV4ADDR, "ipv4", CPARSER_NOT_OK, 0 },
+        { "IP4_08", "1.2.3.3.4.5", CPARSER_NODE_IPV4ADDR, "ipv4", CPARSER_NOT_OK, 0 },
+        { "IP4_09", "a.b.c.d", CPARSER_NODE_IPV4ADDR, "ipv4", CPARSER_NOT_OK, 0 },
         /* File path */
-        { "FILE01", "test.txt", PARSER_NODE_FILE, "fname", PARSER_OK, 1 },
-        { "FILE02", "/usr/include/stdio.h", PARSER_NODE_FILE, "fname", PARSER_OK, 1 },
+        { "FILE01", "test.txt", CPARSER_NODE_FILE, "fname", CPARSER_OK, 1 },
+        { "FILE02", "/usr/include/stdio.h", CPARSER_NODE_FILE, "fname", CPARSER_OK, 1 },
     };
     int n, is_complete, num_tests = 0, num_passes = 0;
     int total_tests = 0, total_passes = 0;
-    parser_result_t result;
-    parser_node_t node;
+    cparser_result_t result;
+    cparser_node_t node;
 
     for (n = 0; n < NELEM(match_testcases); n++) {
         node.type = match_testcases[n].type;
         node.param = match_testcases[n].param;
         is_complete = 0xff;
-        assert(parser_match_fn_tbl[node.type]);
-        result = parser_match_fn_tbl[node.type](match_testcases[n].str, 
+        assert(cparser_match_fn_tbl[node.type]);
+        result = cparser_match_fn_tbl[node.type](match_testcases[n].str, 
                                                 strlen(match_testcases[n].str), 
                                                 &node, &is_complete);
         num_tests++;
@@ -140,7 +140,7 @@ int main (int argc, char *argv[])
         }
         printf("'%s' -> (%d, %s) -> (%s, %s)\n", match_testcases[n].str,
                match_testcases[n].type, match_testcases[n].param, 
-               (PARSER_OK == result ? "OK" : "NOT OK"),
+               (CPARSER_OK == result ? "OK" : "NOT OK"),
                (is_complete ? "COMPLETE" : "INCOMPLETE"));
     }
     printf("Match function tests: %d total. %d passed.\n\n\n", 
@@ -156,9 +156,9 @@ int main (int argc, char *argv[])
 
     /* String */
     char *str = "hello, world", *str_val;
-    result = parser_get_string(str, strlen(str), &str_val);
+    result = cparser_get_string(str, strlen(str), &str_val);
     num_tests++;
-    if ((PARSER_OK != result) || (str_val != str)) {
+    if ((CPARSER_OK != result) || (str_val != str)) {
         printf("FAIL: STR01: %s -> %s\n", str, str_val);
     } else {
         printf("PASS: STR01: %s -> %s\n", str, str_val);
@@ -169,19 +169,19 @@ int main (int argc, char *argv[])
     struct {
         char             *name;
         char             *str;
-        parser_result_t  result;
+        cparser_result_t  result;
         uint32_t         val;
     } get_uint_testcases[] = {
-        { "UINT01", "0x1234abCD", PARSER_OK, 0x1234abcd },
-        { "UINT02", "12345678", PARSER_OK, 12345678 },
-        { "UINT03", "0xabcdef123", PARSER_NOT_OK, 0 },
-        { "UINT04", "9876543210", PARSER_NOT_OK, 0 },
-        { "UINT05", "0x0000001234", PARSER_OK, 0x1234 },
-        { "UINT06", "00000000000001234", PARSER_OK, 1234 }
+        { "UINT01", "0x1234abCD", CPARSER_OK, 0x1234abcd },
+        { "UINT02", "12345678", CPARSER_OK, 12345678 },
+        { "UINT03", "0xabcdef123", CPARSER_NOT_OK, 0 },
+        { "UINT04", "9876543210", CPARSER_NOT_OK, 0 },
+        { "UINT05", "0x0000001234", CPARSER_OK, 0x1234 },
+        { "UINT06", "00000000000001234", CPARSER_OK, 1234 }
     };
     uint32_t uint_val;
     for (n = 0; n < NELEM(get_uint_testcases); n++) {
-        result = parser_get_uint(get_uint_testcases[n].str,
+        result = cparser_get_uint(get_uint_testcases[n].str,
                                  strlen(get_uint_testcases[n].str),
                                  &uint_val);
         num_tests++;
@@ -200,24 +200,24 @@ int main (int argc, char *argv[])
     struct {
         char             *name;
         char             *str;
-        parser_result_t  result;
+        cparser_result_t  result;
         int32_t          val;
     } get_int_testcases[] = {
-        { "INT01", "123", PARSER_OK, 123 },
-        { "INT02", "12345678", PARSER_OK, 12345678 },
-        { "INT03", "12345678900", PARSER_NOT_OK, 0 },
-        { "INT04", "9876543210", PARSER_NOT_OK, 0 },
-        { "INT05", "00000000000001234", PARSER_OK, 1234 },
-        { "INT06", "+000777777", PARSER_OK, 777777 },
-        { "INT07", "-000777777", PARSER_OK, -777777 },
-        { "INT08", "+2147483647", PARSER_OK, 2147483647L },
-        { "INT09", "+2147483648", PARSER_NOT_OK, 0 },
-        { "INT10", "-2147483648", PARSER_OK, -2147483648LL },
-        { "INT11", "-2147483649", PARSER_NOT_OK, 0 },
+        { "INT01", "123", CPARSER_OK, 123 },
+        { "INT02", "12345678", CPARSER_OK, 12345678 },
+        { "INT03", "12345678900", CPARSER_NOT_OK, 0 },
+        { "INT04", "9876543210", CPARSER_NOT_OK, 0 },
+        { "INT05", "00000000000001234", CPARSER_OK, 1234 },
+        { "INT06", "+000777777", CPARSER_OK, 777777 },
+        { "INT07", "-000777777", CPARSER_OK, -777777 },
+        { "INT08", "+2147483647", CPARSER_OK, 2147483647L },
+        { "INT09", "+2147483648", CPARSER_NOT_OK, 0 },
+        { "INT10", "-2147483648", CPARSER_OK, -2147483648LL },
+        { "INT11", "-2147483649", CPARSER_NOT_OK, 0 },
     };
     int32_t int_val;
     for (n = 0; n < NELEM(get_int_testcases); n++) {
-        result = parser_get_int(get_int_testcases[n].str,
+        result = cparser_get_int(get_int_testcases[n].str,
                                  strlen(get_int_testcases[n].str),
                                  &int_val);
         num_tests++;
@@ -235,15 +235,15 @@ int main (int argc, char *argv[])
     struct {
         char             *name;
         char             *str;
-        parser_result_t  result;
+        cparser_result_t  result;
         uint32_t         val;
     } get_hex_testcases[] = {
-        { "HEX01", "0x1234abCD", PARSER_OK, 0x1234abcd },
-        { "HEX02", "0xabcdef123", PARSER_NOT_OK, 0 },
-        { "HEX03", "0x0000001234", PARSER_OK, 0x1234 },
+        { "HEX01", "0x1234abCD", CPARSER_OK, 0x1234abcd },
+        { "HEX02", "0xabcdef123", CPARSER_NOT_OK, 0 },
+        { "HEX03", "0x0000001234", CPARSER_OK, 0x1234 },
     };
     for (n = 0; n < NELEM(get_hex_testcases); n++) {
-        result = parser_get_hex(get_hex_testcases[n].str,
+        result = cparser_get_hex(get_hex_testcases[n].str,
                                 strlen(get_hex_testcases[n].str),
                                 &uint_val);
         num_tests++;
@@ -264,17 +264,17 @@ int main (int argc, char *argv[])
     struct {
         char             *name;
         char             *str;
-        parser_result_t  result;
+        cparser_result_t  result;
         uint8_t          macaddr[6];
     } get_macaddr_testcases[] = {
-        { "MAC01", "12:45:89:ab:CD:Ef", PARSER_OK, 
+        { "MAC01", "12:45:89:ab:CD:Ef", CPARSER_OK, 
           { 0x12, 0x45, 0x89, 0xab, 0xcd, 0xef } },
-        { "MAC02", "1:4:9:a:C:f", PARSER_OK, 
+        { "MAC02", "1:4:9:a:C:f", CPARSER_OK, 
           { 0x01, 0x04, 0x09, 0x0a, 0x0c, 0x0f } },
     };
-    parser_macaddr_t macaddr;
+    cparser_macaddr_t macaddr;
     for (n = 0; n < NELEM(get_macaddr_testcases); n++) {
-        result = parser_get_macaddr(get_macaddr_testcases[n].str,
+        result = cparser_get_macaddr(get_macaddr_testcases[n].str,
                                     strlen(get_macaddr_testcases[n].str),
                                     &macaddr);
         num_tests++;
@@ -295,15 +295,15 @@ int main (int argc, char *argv[])
     struct {
         char             *name;
         char             *str;
-        parser_result_t  result;
+        cparser_result_t  result;
         uint32_t         ipv4addr;
     } get_ipv4addr_testcases[] = {
-        { "IP4_01", "192.168.1.1", PARSER_OK, 0xc0a80101 },
-        { "IP4_02", "333.1.1.1", PARSER_NOT_OK, 0x0 },
+        { "IP4_01", "192.168.1.1", CPARSER_OK, 0xc0a80101 },
+        { "IP4_02", "333.1.1.1", CPARSER_NOT_OK, 0x0 },
     };
     uint32_t ipv4addr;
     for (n = 0; n < NELEM(get_ipv4addr_testcases); n++) {
-        result = parser_get_ipv4addr(get_ipv4addr_testcases[n].str,
+        result = cparser_get_ipv4addr(get_ipv4addr_testcases[n].str,
                                      strlen(get_ipv4addr_testcases[n].str),
                                      &ipv4addr);
         num_tests++;
@@ -323,20 +323,20 @@ int main (int argc, char *argv[])
     struct {
         char             *name;
         char             *str;
-        parser_result_t  result;
+        cparser_result_t  result;
     } get_file_testcases[] = {
-        { "FILE01", "/usr/include/stdlib.h", PARSER_OK },
-        { "FILE02", "/tmp/xyz.parser", PARSER_NOT_OK },
-        { "FILE03", "/usr", PARSER_NOT_OK }
+        { "FILE01", "/usr/include/stdlib.h", CPARSER_OK },
+        { "FILE02", "/tmp/xyz.parser", CPARSER_NOT_OK },
+        { "FILE03", "/usr", CPARSER_NOT_OK }
     };
     char *file;
     for (n = 0; n < NELEM(get_file_testcases); n++) {
-        result = parser_get_file(get_file_testcases[n].str,
+        result = cparser_get_file(get_file_testcases[n].str,
                                  strlen(get_file_testcases[n].str),
                                  &file);
         num_tests++;
         if ((result != get_file_testcases[n].result) || 
-            ((PARSER_OK == result) && 
+            ((CPARSER_OK == result) && 
              strcmp(file, get_file_testcases[n].str))) {
             printf("FAIL: %s: ", get_file_testcases[n].name);
         } else {
@@ -344,7 +344,7 @@ int main (int argc, char *argv[])
             num_passes++;
         }
         printf("%s -> %s\n", get_file_testcases[n].str, 
-               (PARSER_OK == result ? "OK" : "NOT OK"));
+               (CPARSER_OK == result ? "OK" : "NOT OK"));
     }
     printf("Get function tests: %d total. %d passed.\n\n", 
            num_tests, num_passes);

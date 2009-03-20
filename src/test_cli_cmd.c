@@ -37,16 +37,16 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
-#include "parser.h"
-#include "parser_token.h"
+#include "cparser.h"
+#include "cparser_token.h"
 
 int interactive = 0;
-#define PRINTF(args...)                    \
-    if (interactive) {                     \
-        printf(args);                      \
-    } else {                               \
-        memset(output, 0, sizeof(output)); \
-        sprintf(output, args);             \
+#define PRINTF(args...)                         \
+    if (interactive) {                          \
+        printf(args);                           \
+    } else {                                    \
+        memset(output, 0, sizeof(output));      \
+        sprintf(output, args);                  \
     }
 
 #define MAX_NAME        (128)
@@ -59,19 +59,19 @@ char output[2000]; /* buffer for sprintf */
  * Employee record.
  */
 typedef struct employee_ {
-    char         name[MAX_NAME];
-    uint32_t     height;
-    uint32_t     weight;
-    double       bonus_factor;
-    uint32_t     pc_ip_addr;
-    uint8_t      mac_ip_addr[6];
-    uint32_t     id;
+    char         name[MAX_NAME];   /**< Employee name */
+    uint32_t     height;           /**< Height in units of inches */
+    uint32_t     weight;           /**< Weight in units of lbs */
+    double       bonus_factor;     /**< Multiplier for bonus */
+    uint32_t     pc_ip_addr;       /**< PC IP address */
+    uint8_t      mac_ip_addr[6];   /**< PC NIC MAC address */
+    uint32_t     id;               /**< Employee id */
     struct dob_ {
-        uint8_t  month;
-        uint8_t  day;
-        uint8_t  year;
-    } dob;
-    char         title[MAX_TITLE];
+        uint8_t  month;            /**< Month (1-12) */
+        uint8_t  day;              /**< Day (1-31) */
+        uint16_t year;             /**< Year */
+    } dob;                         /**< Date of birth */
+    char         title[MAX_TITLE]; /**< Job title */
 } employee_t;
 
 employee_t roster[MAX_EMPLOYEES];
@@ -82,10 +82,10 @@ employee_t roster[MAX_EMPLOYEES];
  * \param    roster  Pointer to the array of employee records.
  * \param    id      New employee id.
  *
- * \return   PARSER_OK if succeeded; PARSER_ERR_OUT_OF_RES if there is
+ * \return   CPARSER_OK if succeeded; CPARSER_ERR_OUT_OF_RES if there is
  *           no more available slot.
  */ 
-static parser_result_t
+static cparser_result_t
 test_employee_add (employee_t *roster, const uint32_t id)
 {
     int n;
@@ -98,11 +98,11 @@ test_employee_add (employee_t *roster, const uint32_t id)
             /* Found one. Use it */
             memset(&roster[n], 0, sizeof(roster[n]));
             roster[n].id = id;
-            return PARSER_OK;
+            return CPARSER_OK;
         }
     }
 
-    return PARSER_ERR_OUT_OF_RES;
+    return CPARSER_ERR_OUT_OF_RES;
 }
 
 /**
@@ -111,10 +111,10 @@ test_employee_add (employee_t *roster, const uint32_t id)
  * \param    roster  Pointer to the array of employee records.
  * \param    id      Employee id to be deleted.
  *
- * \return   PARSER_OK if succeeded; PARSER_ERR_NOT_EXIST if there is
+ * \return   CPARSER_OK if succeeded; CPARSER_ERR_NOT_EXIST if there is
  *           no employee with that id.
  */
-static parser_result_t
+static cparser_result_t
 test_employee_remove (employee_t *roster, const uint32_t id)
 {
     int n;
@@ -125,11 +125,11 @@ test_employee_remove (employee_t *roster, const uint32_t id)
     for (n = 0; n < MAX_EMPLOYEES; n++) {
         if (id == roster[n].id) {
             memset(&roster[n], 0, sizeof(*roster));
-            return PARSER_OK;
+            return CPARSER_OK;
         }
     }
 
-    return PARSER_ERR_NOT_EXIST;
+    return CPARSER_ERR_NOT_EXIST;
 }
 
 /**
@@ -138,7 +138,7 @@ test_employee_remove (employee_t *roster, const uint32_t id)
  * \param    roster  Pointer to the array of employee records.
  * \param    id      Employee id to search.
  *
- * \return   PARSER_OK if succeeded; PARSER_ERR_NOT_EXIST if there is
+ * \return   CPARSER_OK if succeeded; CPARSER_ERR_NOT_EXIST if there is
  *           no employee with that id.
  */
 static employee_t *
@@ -174,8 +174,8 @@ test_employee_init (employee_t *roster)
 /**
  * Handle "show employees".
  */
-parser_result_t
-parser_cmd_show_employees (parser_context_t *context)
+cparser_result_t
+cparser_cmd_show_employees (cparser_context_t *context)
 {
     int n, num_shown = 0;
 
@@ -191,14 +191,14 @@ parser_cmd_show_employees (parser_context_t *context)
     if (!num_shown) {
         PRINTF("No employee in the roster.\n");
     }
-    return PARSER_OK;
+    return CPARSER_OK;
 }
 
 /**
  * Handle "show employees all".
  */
-parser_result_t
-parser_cmd_show_employees_all (parser_context_t *context)
+cparser_result_t
+cparser_cmd_show_employees_all (cparser_context_t *context)
 {
     int n, num_shown = 0;
 
@@ -217,25 +217,25 @@ parser_cmd_show_employees_all (parser_context_t *context)
     if (!num_shown) {
         PRINTF("No employee in the roster.\n");
     }
-    return PARSER_OK;
+    return CPARSER_OK;
 }
 
 /**
  * Handle "show employees-by-id <HEX:min> <HEX:max>".
  */
-parser_result_t
-parser_cmd_show_employees_by_id_min_max (parser_context_t *context, 
-                                         uint32_t *min, uint32_t *max)
+cparser_result_t
+cparser_cmd_show_employees_by_id_min_max (cparser_context_t *context, 
+                                          uint32_t *min, uint32_t *max)
 {
     assert(context && min); /* don't assert on 'max' because it is optional */
-    return PARSER_OK;
+    return CPARSER_OK;
 }
 
 /**
  * Handle "emp -> name <STRING:name>".
  */
-parser_result_t
-parser_cmd_emp_name_name (parser_context_t *context, char **name)
+cparser_result_t
+cparser_cmd_emp_name_name (cparser_context_t *context, char **name)
 {
     employee_t *emp;
 
@@ -243,14 +243,14 @@ parser_cmd_emp_name_name (parser_context_t *context, char **name)
     emp = (employee_t *)context->cookie[1];
     assert(emp);
     strncpy(emp->name, *name, MAX_NAME);
-    return PARSER_OK;
+    return CPARSER_OK;
 }
 
 /**
  * Handle "emp -> height <UINT:inches>".
  */
-parser_result_t
-parser_cmd_emp_height_inches (parser_context_t *context, uint32_t *inches)
+cparser_result_t
+cparser_cmd_emp_height_inches (cparser_context_t *context, uint32_t *inches)
 {
     employee_t *emp;
 
@@ -259,17 +259,17 @@ parser_cmd_emp_height_inches (parser_context_t *context, uint32_t *inches)
     assert(emp);
     if (120 <= *inches) {
         PRINTF("Too tall!\n");
-        return PARSER_NOT_OK;
+        return CPARSER_NOT_OK;
     }
     emp->height = *inches;
-    return PARSER_OK;
+    return CPARSER_OK;
 }
 
 /**
  * Handle "emp -> weight <UINT:lbs>".
  */
-parser_result_t
-parser_cmd_emp_weight_lbs (parser_context_t *context, uint32_t *lbs)
+cparser_result_t
+cparser_cmd_emp_weight_lbs (cparser_context_t *context, uint32_t *lbs)
 {
     employee_t *emp;
 
@@ -277,14 +277,14 @@ parser_cmd_emp_weight_lbs (parser_context_t *context, uint32_t *lbs)
     emp = (employee_t *)context->cookie[1];
     assert(emp);
     emp->weight = *lbs;
-    return PARSER_OK;
+    return CPARSER_OK;
 }
 
 /**
  * Handle "emp -> bonuns-factor <FLOAT:scale>".
  */
-parser_result_t
-parser_cmd_emp_bonus_factor_scale (parser_context_t *context, double *scale)
+cparser_result_t
+cparser_cmd_emp_bonus_factor_scale (cparser_context_t *context, double *scale)
 {
     employee_t *emp;
 
@@ -292,15 +292,15 @@ parser_cmd_emp_bonus_factor_scale (parser_context_t *context, double *scale)
     emp = (employee_t *)context->cookie[1];
     assert(emp);
     emp->bonus_factor = *scale;
-    return PARSER_OK;
+    return CPARSER_OK;
 }
 
 /**
  * Handle "emp -> pc-ip-address <IPV4ADDR:ipv4>".
  */
-parser_result_t
-parser_cmd_emp_pc_ip_address_ipv4 (parser_context_t *context,
-                                   uint32_t *ipv4)
+cparser_result_t
+cparser_cmd_emp_pc_ip_address_ipv4 (cparser_context_t *context,
+                                    uint32_t *ipv4)
 {
     employee_t *emp;
 
@@ -308,26 +308,26 @@ parser_cmd_emp_pc_ip_address_ipv4 (parser_context_t *context,
     emp = (employee_t *)context->cookie[1];
     assert(emp);
     emp->pc_ip_addr = *ipv4;
-    return PARSER_OK;
+    return CPARSER_OK;
 }
 
 
 /**
  * Handle "emp -> pc-mac-address <MACADDR:addr>".
  */
-parser_result_t
-parser_cmd_emp_pc_mac_address_addr (parser_context_t *context,
-                                    parser_macaddr_t *addr)
+cparser_result_t
+cparser_cmd_emp_pc_mac_address_addr (cparser_context_t *context,
+                                     cparser_macaddr_t *addr)
 {
     assert(context && addr);
-    return PARSER_OK;
+    return CPARSER_OK;
 }
 
 /**
  * Handle "emp -> employee-id <HEX:id>".
  */
-parser_result_t
-parser_cmd_emp_employee_id_id (parser_context_t *context, uint32_t *id)
+cparser_result_t
+cparser_cmd_emp_employee_id_id (cparser_context_t *context, uint32_t *id)
 {
     employee_t *emp;
 
@@ -335,16 +335,16 @@ parser_cmd_emp_employee_id_id (parser_context_t *context, uint32_t *id)
     emp = (employee_t *)context->cookie[1];
     assert(emp);
     emp->id = *id;
-    return PARSER_OK;
+    return CPARSER_OK;
 }
 
 /**
  * Handle "emp -> date-of-birth <INT:month> <INT:day> <INT:year>".
  */
-parser_result_t
-parser_cmd_emp_date_of_birth_month_day_year (parser_context_t *context, 
-                                             int32_t *month, int32_t *day, 
-                                             int32_t *year)
+cparser_result_t
+cparser_cmd_emp_date_of_birth_month_day_year (cparser_context_t *context, 
+                                              int32_t *month, int32_t *day, 
+                                              int32_t *year)
 {
     employee_t *emp;
 
@@ -353,7 +353,7 @@ parser_cmd_emp_date_of_birth_month_day_year (parser_context_t *context,
     assert(emp);
     if (!(*month) || (12 < (*month))) {
         PRINTF("Month must be from 1-12.\n");
-        return PARSER_NOT_OK;
+        return CPARSER_NOT_OK;
     }
     /* This is not totally correct but you get the point */
     if (!(*day) || (31 < (*day))) {
@@ -362,14 +362,14 @@ parser_cmd_emp_date_of_birth_month_day_year (parser_context_t *context,
     emp->dob.month = *month;
     emp->dob.day = *day;
     emp->dob.year = *year;
-    return PARSER_OK;
+    return CPARSER_OK;
 }
 
 /**
  * Handle "emp -> title <STRING:title>".
  */
-parser_result_t
-parser_cmd_emp_title_title (parser_context_t *context, char **title)
+cparser_result_t
+cparser_cmd_emp_title_title (cparser_context_t *context, char **title)
 {
     employee_t *emp;
 
@@ -378,27 +378,27 @@ parser_cmd_emp_title_title (parser_context_t *context, char **title)
     assert(emp);
     strncpy(emp->name, *title, MAX_NAME);
     emp->name[MAX_NAME-1] = '\0';
-    return PARSER_OK;
+    return CPARSER_OK;
 }
 
 /**
  * Handle "emp -> exit".
  */
-parser_result_t
-parser_cmd_emp_exit (parser_context_t *context)
+cparser_result_t
+cparser_cmd_emp_exit (cparser_context_t *context)
 {
     assert(context && context->parser);
-    return parser_submode_exit(context->parser);
+    return cparser_submode_exit(context->parser);
 }
 
 /**
  * Handle "employee <UINT:id>".
  */
-parser_result_t
-parser_cmd_employee_id (parser_context_t *context, uint32_t *id)
+cparser_result_t
+cparser_cmd_employee_id (cparser_context_t *context, uint32_t *id)
 {
     employee_t *new_emp;
-    char prompt[PARSER_MAX_PROMPT];
+    char prompt[CPARSER_MAX_PROMPT];
 
     assert(context && id && (*id));
 
@@ -406,24 +406,24 @@ parser_cmd_employee_id (parser_context_t *context, uint32_t *id)
     new_emp = test_employee_search(roster, *id);
     if (!new_emp) {
         /* Add a new record with that name */
-        if (PARSER_OK != test_employee_add(roster, *id)) {
+        if (CPARSER_OK != test_employee_add(roster, *id)) {
             PRINTF("Fail to add employee.\n");
-            return PARSER_NOT_OK;
+            return CPARSER_NOT_OK;
         }
         new_emp = test_employee_search(roster, *id);
     }
 
     /* Enter the submode */
     assert(new_emp);
-    snprintf(prompt, PARSER_MAX_PROMPT, "0x%08X: ", *id);
-    return parser_submode_enter(context->parser, new_emp, prompt);
+    snprintf(prompt, CPARSER_MAX_PROMPT, "0x%08X: ", *id);
+    return cparser_submode_enter(context->parser, new_emp, prompt);
 }
 
 /**
  * Handle "no employee <UINT:id>".
  */
-parser_result_t
-parser_cmd_no_employee_id (parser_context_t *context, uint32_t *id)
+cparser_result_t
+cparser_cmd_no_employee_id (cparser_context_t *context, uint32_t *id)
 {
     employee_t *emp;
 
@@ -433,7 +433,7 @@ parser_cmd_no_employee_id (parser_context_t *context, uint32_t *id)
     emp = test_employee_search(roster, *id);
     if (!emp) {
         PRINTF("Employee 0x%08X does not exist in the database.\n", *id);
-        return PARSER_ERR_NOT_EXIST;
+        return CPARSER_ERR_NOT_EXIST;
     }
 
     /* Delete it */
@@ -443,18 +443,18 @@ parser_cmd_no_employee_id (parser_context_t *context, uint32_t *id)
 /**
  * Load a roster file into memory.
  */
-parser_result_t
-parser_cmd_load_roster_filename (parser_context_t *context, char **filename)
+cparser_result_t
+cparser_cmd_load_roster_filename (cparser_context_t *context, char **filename)
 {
     assert(context && filename && (*filename));
-    return parser_load_cmd(context->parser, *filename);
+    return cparser_load_cmd(context->parser, *filename);
 }
 
 /**
  * Save the roster in memory into a file.
  */
-parser_result_t
-parser_cmd_save_roster_filename (parser_context_t *context, char **filename)
+cparser_result_t
+cparser_cmd_save_roster_filename (cparser_context_t *context, char **filename)
 {
     FILE *fp;
     int n;
@@ -463,7 +463,7 @@ parser_cmd_save_roster_filename (parser_context_t *context, char **filename)
     fp = fopen(*filename, "w");
     if (!fp) {
         PRINTF("Fail to open %s.\n", *filename);
-        return PARSER_NOT_OK;
+        return CPARSER_NOT_OK;
     }
 
     for (n = 0; n < MAX_EMPLOYEES; n++) {
@@ -496,33 +496,33 @@ parser_cmd_save_roster_filename (parser_context_t *context, char **filename)
     }
 
     fclose(fp);
-    return PARSER_OK;
+    return CPARSER_OK;
 }
 
 /**
  * List all available commands
  */
-parser_result_t
-parser_cmd_help_filter (parser_context_t *context, char **filter)
+cparser_result_t
+cparser_cmd_help_filter (cparser_context_t *context, char **filter)
 {
     assert(context);
-    return parser_help_cmd(context->parser, filter ? *filter : NULL);
+    return cparser_help_cmd(context->parser, filter ? *filter : NULL);
 }
 
-parser_result_t
-parser_cmd_emp_help_filter (parser_context_t *context, char **filter)
+cparser_result_t
+cparser_cmd_emp_help_filter (cparser_context_t *context, char **filter)
 {
     assert(context);
-    return parser_help_cmd(context->parser, filter ? *filter : NULL);
+    return cparser_help_cmd(context->parser, filter ? *filter : NULL);
 }
 
 /**
  * Exit the parser test program.
  */
-parser_result_t
-parser_cmd_quit (parser_context_t *context)
+cparser_result_t
+cparser_cmd_quit (cparser_context_t *context)
 {
     assert(context);
-    return parser_quit(context->parser);
+    return cparser_quit(context->parser);
 }
 

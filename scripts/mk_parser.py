@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# $Id: mk_parser.py 55 2009-03-13 08:11:49Z henry $
+# $Id: mk_parser.py 60 2009-03-15 21:56:47Z henry $
 
 # Copyright (c) 2008, Henry Kwok
 # All rights reserved.
@@ -48,7 +48,7 @@ class NODE:
                    'INT'        : 'int32_t ',
                    'HEX'        : 'uint32_t ',
                    'FLOAT'      : 'double ',
-                   'MACADDR'    : 'parser_macaddr_t ',
+                   'MACADDR'    : 'cparser_macaddr_t ',
                    'IPV4ADDR'   : 'uint32_t ',
                    'FILE'       : 'char *'
                    }
@@ -86,9 +86,9 @@ class NODE:
         elif 'ROOT' == child.type:
             # If we are adding a child ROOT node, the parent ('self' here)
             # must be an END node. For END node, we insert a string
-            # 'parser_glue' to the front of self.path. So, we must
+            # 'cparser_glue' to the front of self.path. So, we must
             # remove it first before creating the submode root path
-            child.path = self.param.replace('parser_glue', '') + '_root'
+            child.path = self.param.replace('cparser_glue', '') + '_root'
         if len(self.children) > 0:
             self.children[-1].next = child
         
@@ -139,11 +139,11 @@ class NODE:
     # gen_c_struct - Generate the C structure name.
     def gen_c_struct(self, fout):
         if self.parent == None:
-            fout.write('parser_node_t parser_root = {\n')
+            fout.write('cparser_node_t cparser_root = {\n')
         else:
-            fout.write('parser_node_t parser_node%s = {\n' % self.path)
+            fout.write('cparser_node_t cparser_node%s = {\n' % self.path)
         # type
-        fout.write('    PARSER_NODE_%s,\n' % self.type)
+        fout.write('    CPARSER_NODE_%s,\n' % self.type)
         # flags
         if len(self.flags) == 0:
             fout.write('    0,\n')
@@ -164,12 +164,12 @@ class NODE:
             fout.write('    NULL,\n')
         # sibling
         if self.next:
-            fout.write('    &parser_node%s,\n' % self.next.path)
+            fout.write('    &cparser_node%s,\n' % self.next.path)
         else:
             fout.write('    NULL,\n')
         # children
         if len(self.children) > 0:
-            fout.write('    &parser_node%s\n' % self.children[0].path)
+            fout.write('    &cparser_node%s\n' % self.children[0].path)
         else:
             fout.write('    NULL\n');
         fout.write('};\n')
@@ -187,8 +187,8 @@ class NODE:
                 break
 
         # Declare the action function
-        fout.write('parser_result_t %s(parser_context_t *context' %
-                   self.param.replace('parser_glue', 'parser_cmd'))
+        fout.write('cparser_result_t %s(cparser_context_t *context' %
+                   self.param.replace('cparser_glue', 'cparser_cmd'))
 
         # Declare the variable list
         skip = False
@@ -213,8 +213,8 @@ class NODE:
                 break
 
         # Build the glue function
-        fout.write('parser_result_t\n')
-        fout.write('%s (parser_t *parser)\n' % self.param)
+        fout.write('cparser_result_t\n')
+        fout.write('%s (cparser_t *parser)\n' % self.param)
         fout.write('{\n')
 
         # Declare the variable list
@@ -230,8 +230,8 @@ class NODE:
         # Extract the parameters
         for k in range(0, len(p)):
             if p[k].is_param():
-                fout.write('    if (PARSER_OK == \n')
-                fout.write('        parser_get_%s(parser->tokens[%d].buf,\n' %
+                fout.write('    if (CPARSER_OK == \n')
+                fout.write('        cparser_get_%s(parser->tokens[%d].buf,\n' %
                            (p[k].type.lower(), k))
                 fout.write('            parser->tokens[%d].token_len, &%s_val)) {\n' %
                            (k, p[k].param))
@@ -240,16 +240,16 @@ class NODE:
                 fout.write('    } else if (%d <= parser->token_tos) {\n' % (k+1))
                 fout.write('        printf("ERROR: %s is not a valid %s.\\n");\n' %
                            (p[k].param, p[k].type))
-                fout.write('        return PARSER_NOT_OK;\n')
+                fout.write('        return CPARSER_NOT_OK;\n')
                 fout.write('    }\n')
 
         # Call the user-provided action function
-        fout.write('    %s(&parser->context' % self.param.replace('parser_glue', 'parser_cmd'))
+        fout.write('    %s(&parser->context' % self.param.replace('cparser_glue', 'cparser_cmd'))
         for k in range(0, len(p)):
             if p[k].is_param():
                 fout.write(',\n        %s_ptr' % p[k].param)
         fout.write(');\n')
-        fout.write('    return PARSER_OK;\n')
+        fout.write('    return CPARSER_OK;\n')
         fout.write('}\n\n')
 
 # add_cli - Add one line of CLI to the parse tree
@@ -295,12 +295,12 @@ def add_cli(root, line, line_num, comment):
         # Parse each token
         # Look for '{'
         if '{' == t:
-            flags.append('PARSER_NODE_FLAGS_OPT_START')
+            flags.append('CPARSER_NODE_FLAGS_OPT_START')
             num_opt_start = num_opt_start + 1
             continue
         # Look for '}'
         if '}' == t:
-            nodes[len(nodes)-1].flags.append('PARSER_NODE_FLAGS_OPT_END')
+            nodes[len(nodes)-1].flags.append('CPARSER_NODE_FLAGS_OPT_END')
             continue
         flags = []
         # Look for a parameter 
@@ -334,7 +334,7 @@ def add_cli(root, line, line_num, comment):
     # We need to create the glue function name. Since the path of the node
     # is set up when the node is inserted, we don't have it here. So,
     # we manually walk all the nodes and generate the glue function name
-    glue_fn = 'parser_glue' + root.param
+    glue_fn = 'cparser_glue' + root.param
     for n in nodes:
         glue_fn = glue_fn + '_' + n.param.replace('-','_')
     
@@ -347,12 +347,12 @@ def add_cli(root, line, line_num, comment):
         if num_opt_start == k:
             end_node = NODE('END', glue_fn, comment, [])
         else:
-            end_node = NODE('END', glue_fn, None, ['PARSER_NODE_FLAGS_OPT_PARTIAL'])
+            end_node = NODE('END', glue_fn, None, ['CPARSER_NODE_FLAGS_OPT_PARTIAL'])
         for n in nodes:
             if drop:
                 continue
-            if (n.flags.count('PARSER_NODE_FLAGS_OPT_START') +
-                n.flags.count('PARSER_NODE_FLAGS_OPT_END') > 0):
+            if (n.flags.count('CPARSER_NODE_FLAGS_OPT_START') +
+                n.flags.count('CPARSER_NODE_FLAGS_OPT_END') > 0):
                 if num_braces == k:
                     drop = True
                 num_braces = num_braces + 1
@@ -517,7 +517,7 @@ def walker_gen_dbg(node, fout):
 # walker_gen_glue - Generate glue functions
 def walker_gen_glue(node, fout):
     if (('END' != node.type) or
-        (node.flags.count('PARSER_NODE_FLAGS_OPT_PARTIAL') > 0)):
+        (node.flags.count('CPARSER_NODE_FLAGS_OPT_PARTIAL') > 0)):
         return
     node.gen_glue_fn(fout)
     return
@@ -525,7 +525,7 @@ def walker_gen_glue(node, fout):
 # walker_gen_action - Generate action functions
 def walker_gen_action(node, fout):
     if (('END' != node.type) or
-        (node.flags.count('PARSER_NODE_FLAGS_OPT_PARTIAL') > 0)):
+        (node.flags.count('CPARSER_NODE_FLAGS_OPT_PARTIAL') > 0)):
         return
     node.gen_action_fn(fout)
     
@@ -564,30 +564,30 @@ def main():
         root = process_cli_file(f, root, mode, labels)
 
     # Generate .c file that contains glue functions and parse tree
-    fout = open('%s/parser_tree.c' % out_dir, 'w')
+    fout = open('%s/cparser_tree.c' % out_dir, 'w')
     fout.write('/*----------------------------------------------------------------------\n')
     fout.write(' * This file is generated by mk_parser.py.\n')
     fout.write(' *----------------------------------------------------------------------*/\n')
     fout.write('#include <stdint.h>\n')
     fout.write('#include <stdio.h>\n')
-    fout.write('#include "parser.h"\n')
-    fout.write('#include "parser_priv.h"\n')
-    fout.write('#include "parser_token.h"\n')
-    fout.write('#include "parser_tree.h"\n\n')
+    fout.write('#include "cparser.h"\n')
+    fout.write('#include "cparser_priv.h"\n')
+    fout.write('#include "cparser_token.h"\n')
+    fout.write('#include "cparser_tree.h"\n\n')
     
     root.walk(walker_gen_glue, 'pre-order', fout)
     root.walk(walker_gen_struct, 'post-order', fout)
     fout.close()
 
-    fout = open('%s/parser_tree.h' % out_dir, 'w')
+    fout = open('%s/cparser_tree.h' % out_dir, 'w')
     fout.write('/*----------------------------------------------------------------------\n')
     fout.write(' * This file is generated by mk_parser.py.\n')
     fout.write(' *----------------------------------------------------------------------*/\n')
-    fout.write('#ifndef __PARSER_TREE_H__\n')
-    fout.write('#define __PARSER_TREE_H__\n\n')
-    fout.write('extern parser_node_t parser_root;\n\n')
+    fout.write('#ifndef __CPARSER_TREE_H__\n')
+    fout.write('#define __CPARSER_TREE_H__\n\n')
+    fout.write('extern cparser_node_t cparser_root;\n\n')
     root.walk(walker_gen_action, 'pre-order', fout)
-    fout.write('\n#endif /* __PARSER_TREE_H__ */\n')
+    fout.write('\n#endif /* __CPARSER_TREE_H__ */\n')
     fout.close()
 
     return

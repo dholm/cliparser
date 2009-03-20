@@ -1,7 +1,7 @@
 /**
- * \file     parser_io_unix.c
+ * \file     cparser_io_unix.c
  * \brief    Unix-specific parser I/O routines
- * \version  \verbatim $Id: parser_io_unix.c 51 2009-03-12 22:33:20Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_io_unix.c 72 2009-03-19 07:30:35Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -36,9 +36,9 @@
 #include <termios.h>
 #include <unistd.h>
 #include <string.h>
-#include "parser.h"
-#include "parser_io.h"
-#include "parser_priv.h"
+#include "cparser.h"
+#include "cparser_io.h"
+#include "cparser_priv.h"
 
 /**
  * \brief    Enable/disable canonical mode.
@@ -48,7 +48,7 @@
  * \param    enable 1 to enable; 0 to disable.
  */
 static void
-parser_term_set_canonical (parser_t *parser, int enable)
+cparser_term_set_canonical (cparser_t *parser, int enable)
 {
     static struct termios old_term;
     static int old_term_set = 0;
@@ -71,10 +71,10 @@ parser_term_set_canonical (parser_t *parser, int enable)
 }
 
 void
-parser_getch (parser_t *parser, int *ch, parser_char_t *type)
+cparser_getch (cparser_t *parser, int *ch, cparser_char_t *type)
 {
     assert(VALID_PARSER(parser) && ch && type);
-    *type = PARSER_CHAR_UNKNOWN;
+    *type = CPARSER_CHAR_UNKNOWN;
     *ch = getchar();
     if ('' == *ch) {
         *ch = getchar();
@@ -82,16 +82,16 @@ parser_getch (parser_t *parser, int *ch, parser_char_t *type)
             *ch = getchar();
             switch (*ch) {
                 case 'A':
-                    *type = PARSER_CHAR_UP_ARROW;
+                    *type = CPARSER_CHAR_UP_ARROW;
                     break;
                 case 'B':
-                    *type = PARSER_CHAR_DOWN_ARROW;
+                    *type = CPARSER_CHAR_DOWN_ARROW;
                     break;
                 case 'C':
-                    *type = PARSER_CHAR_RIGHT_ARROW;
+                    *type = CPARSER_CHAR_RIGHT_ARROW;
                     break;
                 case 'D':
-                    *type = PARSER_CHAR_LEFT_ARROW;
+                    *type = CPARSER_CHAR_LEFT_ARROW;
                     break;
             }
         }
@@ -101,32 +101,32 @@ parser_getch (parser_t *parser, int *ch, parser_char_t *type)
                (*ch == parser->cfg.ch_del) ||
                (*ch == parser->cfg.ch_help) ||
                (*ch == parser->cfg.ch_complete)) {
-        *type = PARSER_CHAR_REGULAR;
+        *type = CPARSER_CHAR_REGULAR;
     }
 }
 
 void
-parser_putc (const parser_t *parser, const char ch)
+cparser_putc (const cparser_t *parser, const char ch)
 {
     assert(parser);
     write(parser->cfg.fd, &ch, 1);
 }
 
 void
-parser_puts (const parser_t *parser, const char *s)
+cparser_puts (const cparser_t *parser, const char *s)
 {
     assert(parser && s);
     write(parser->cfg.fd, s, strlen(s));
 }
 
 void 
-parser_io_init (parser_t *parser)
+cparser_io_init (cparser_t *parser)
 {
-    parser_term_set_canonical(parser, 0);
+    cparser_term_set_canonical(parser, 0);
 }
 
 void
-parser_io_cleanup (parser_t *parser)
+cparser_io_cleanup (cparser_t *parser)
 {
-    parser_term_set_canonical(parser, 1);
+    cparser_term_set_canonical(parser, 1);
 }

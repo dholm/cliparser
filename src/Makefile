@@ -27,10 +27,12 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 SRC_BASE = ..
-SRC_FILES = parser.c parser_token.c parser_token_tbl.c parser_io_unix.c parser_fsm.c parser_line.c
-SRC_MOD = parser.a
-
-include $(SRC_BASE)/rules.mk
+SRC_FILES = cparser.c cparser_token.c cparser_token_tbl.c cparser_io_unix.c \
+	    cparser_fsm.c cparser_line.c
+SRC_MOD = cparser.a
 
 local_clean:
+	rm -fr $(PLATFORM) cparser_tree_$(PLATFORM).c cparser_tree_$(PLATFORM)_dbg.c
+
+include $(SRC_BASE)/rules.mk
 

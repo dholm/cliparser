@@ -1,5 +1,5 @@
 # Makefile rules for CLI Parser
-# $Id: rules.mk 54 2009-03-13 08:06:44Z henry $
+# $Id: rules.mk 77 2009-03-20 08:11:11Z henry $
 
 # Copyright (c) 2008-2009, Henry Kwok
 # All rights reserved.
@@ -104,3 +104,5 @@ endif
 clean: local_clean
 	rm -f $(SRC_BIN) *.o $(SRC_BIN).exe 
 	rm -f *.d
+
+local_clean:

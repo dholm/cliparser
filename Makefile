@@ -1,5 +1,5 @@
 # Top-level Makefile for CLI Parser
-# $Id: Makefile 54 2009-03-13 08:06:44Z henry $
+# $Id: Makefile 77 2009-03-20 08:11:11Z henry $
 
 # Copyright (c) 2008, Henry Kwok
 # All rights reserved.
@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-all: unix
+all: unix dox
 
 dbg: unix_dbg
 
@@ -50,14 +50,19 @@ unix_dbg:
 	make -f Makefile.unix DEBUG=TRUE all
 
 unix_tests: unix
-	./scripts/run_tests.py ./build/unix/bin unix
+	make -f Makefile.unix tests
+
+unix_tests_logged: unix
+	make -f Makefile.unix tests_logged
 
 dox:
 	doxygen doxygen.cfg
 
 # Clean targets
 unix_clean:
-	rm -fr build/unix
-	rm -fr build/unix_dbg
+	make -f Makefile.unix clean
+	make -f Makefile.unix DEBUG=TRUE clean
 
 clean: unix_clean
+	rm -fr build/ html/
+

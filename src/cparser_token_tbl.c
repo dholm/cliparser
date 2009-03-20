@@ -1,7 +1,7 @@
 /**
- * \file     parser_fsm.h
- * \brief    Parser state machine definitions and prototype.
- * \version  \verbatim $Id: parser_fsm.h 51 2009-03-12 22:33:20Z henry $ \endverbatim
+ * \file     cparser_token_tbl.c
+ * \brief    Parser token processing tables.
+ * \version  \verbatim $Id: cparser_token_tbl.c 62 2009-03-15 22:09:50Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -30,46 +30,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __PARSER_FSM_H__
-#define __PARSER_FSM_H__
+#include <stdio.h>
+#include <stdint.h>
+#include "cparser.h"
+#include "cparser_priv.h"
+#include "cparser_token.h"
 
-#include "parser.h"
+cparser_match_fn cparser_match_fn_tbl[CPARSER_MAX_NODES] = {
+    cparser_match_root,
+    cparser_match_end,
+    cparser_match_keyword, 
+    cparser_match_string,
+    cparser_match_uint,
+    cparser_match_int,
+    cparser_match_hex,
+    cparser_match_float,
+    cparser_match_macaddr,
+    cparser_match_ipv4addr,
+    cparser_match_file
+};
 
-#define CUR_TOKEN(p) (&((p)->tokens[(p)->token_tos]))
-
-/**
- * Reset all parser FSM states.
- *
- * \param    parser Pointer to the parser structure.
- *
- * \return   None.
- */
-void parser_fsm_reset(parser_t *parser);
-
-/**
- * Input a character to parser FSM.
- *
- * \param    parser Pointer to the parser structure.
- * \param    ch     Input character.
- *
- * \return   PARSER_OK if succeeded; PARSER_NOT_OK otherwise.
- */
-parser_result_t parser_fsm_input(parser_t *parser, char ch);
-
-/**
- * Walk through all children of a node. Return a match node if one is found.
- *
- * \param    token     Pointer to the beginning of the token.
- * \param    token_len Length of the token.
- * \param    parent    Pointer to the parent node.
- *
- * \retval   match       Pointer to a node that matches the token.
- *                       If there are multiple matches, the highest priority match
- *                       is returned.
- * \retval   is_complete 1 if the token completely matches 
- * \return   Number of matches.
- */
-int parser_match(const char *token, const int token_len, parser_node_t *parent,
-                 parser_node_t **match, int *is_complete);
-
-#endif /* __PARSER_FSM_H__ */
+cparser_complete_fn cparser_complete_fn_tbl[CPARSER_MAX_NODES] = {
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    cparser_complete_file
+};

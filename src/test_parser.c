@@ -3,7 +3,7 @@
  * \brief    Test program for parser library. 
  * \details  This is a test program with a simple CLI that serves as a demo 
  *           as well.
- * \version  \verbatim $Id: test_parser.c 51 2009-03-12 22:33:20Z henry $ \endverbatim
+ * \version  \verbatim $Id: test_parser.c 81 2009-03-20 10:10:22Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -37,12 +37,14 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
-#include "parser.h"
-#include "parser_priv.h"
-#include "parser_token.h"
-#include "parser_tree.h"
+#include "cparser.h"
+#include "cparser_priv.h"
+#include "cparser_token.h"
+#include "cparser_tree.h"
 
+/** Zeroize a data structure */
 #define BZERO_OUTPUT memset(output, 0, sizeof(output))
+
 extern char output[2000];
 extern int interactive;
 int num_passed = 0, num_failed =0;
@@ -51,12 +53,12 @@ int num_passed = 0, num_failed =0;
  * Feed a string into the parser (skipping line buffering) 
  */
 static void
-feed_parser (parser_t *parser, const char *str)
+feed_parser (cparser_t *parser, const char *str)
 {
     int m, n;
     m = strlen(str);
     for (n = 0; n < m; n++) {
-        parser_input(parser, str[n], PARSER_CHAR_REGULAR);
+        cparser_input(parser, str[n], CPARSER_CHAR_REGULAR);
     }
 }
 
@@ -78,7 +80,7 @@ update_result (int pass, const char *test)
 int
 main (int argc, char *argv[])
 {
-    parser_t parser;
+    cparser_t parser;
     char *config_file = NULL;
     int ch, debug = 0;
 
@@ -99,7 +101,7 @@ main (int argc, char *argv[])
         }
     }
 
-    parser.cfg.root = &parser_root;
+    parser.cfg.root = &cparser_root;
     parser.cfg.ch_complete = '\t';
     /* 
      * Instead of making sure the terminal setting of the target and 
@@ -109,19 +111,19 @@ main (int argc, char *argv[])
     parser.cfg.ch_erase = '\b';
     parser.cfg.ch_del = 127;
     parser.cfg.ch_help = '?';
-    parser.cfg.flags = (debug ? PARSER_FLAGS_DEBUG : 0);
+    parser.cfg.flags = (debug ? CPARSER_FLAGS_DEBUG : 0);
     strcpy(parser.cfg.prompt, "TEST>> ");
     parser.cfg.fd = STDOUT_FILENO;
 
-    if (PARSER_OK != parser_init(&parser.cfg, &parser)) {
+    if (CPARSER_OK != cparser_init(&parser.cfg, &parser)) {
         printf("Fail to initialize parser.\n");
 	return -1;
     }
     if (interactive) {
         if (config_file) {
-            (void)parser_load_cmd(&parser, config_file);
+            (void)cparser_load_cmd(&parser, config_file);
         }
-        parser_run(&parser);
+        cparser_run(&parser);
     } else {
         /* Run the scripted tests */
         /* Test 1 - WHITESPACE -> TOKEN -> END */

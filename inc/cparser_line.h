@@ -1,7 +1,7 @@
 /**
- * \file     parser_line.h
+ * \file     cparser_line.h
  * \brief    Parser line buffer API definitions and prototypes.
- * \version  \verbatim $Id: parser_line.h 51 2009-03-12 22:33:20Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_line.h 81 2009-03-20 10:10:22Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -30,26 +30,31 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __PARSER_LINE_H__
-#define __PARSER_LINE_H__
+#ifndef __CPARSER_LINE_H__
+#define __CPARSER_LINE_H__
 
-#include "parser_options.h"
+#include "cparser_options.h"
 
+/**
+ * \struct   cparser_line_t
+ * \brief    A parser line structure.
+ * \details  A parser line represents a line of user input in the parser.
+ */
 typedef struct {
     short  last;      /**< Point to the last character in the line buffer */
     short  current;   /**< Point to the current character */
-    char   buf[PARSER_MAX_LINE_SIZE+1];
-} parser_line_t;
+    char   buf[CPARSER_MAX_LINE_SIZE+1];
+} cparser_line_t;
 
 /**
  * Reset a line buffer into an "empty" state.
  *
  * \param    line Pointer to a line structure.
  *
- * \return   PARSER_OK if succeeded; PARSER_ERR_INVALID_PARAMS if the line 
+ * \return   CPARSER_OK if succeeded; CPARSER_ERR_INVALID_PARAMS if the line 
  *           is NULL.
  */ 
-parser_result_t parser_line_reset(parser_line_t *line);
+cparser_result_t cparser_line_reset(cparser_line_t *line);
 
 /**
  * Insert a character into a line buffer at the current position.
@@ -57,10 +62,10 @@ parser_result_t parser_line_reset(parser_line_t *line);
  * \param    parser Pointer to a parser structure.
  * \param    ch     Character to be inserted.
  *
- * \return   PARSER_OK if succeeded; PARSER_ERR_INVALID_PARAMS if inputs
- *           are invalid; PARSER_ERR_OUT_OF_RES if the line buffer is full.
+ * \return   CPARSER_OK if succeeded; CPARSER_ERR_INVALID_PARAMS if inputs
+ *           are invalid; CPARSER_ERR_OUT_OF_RES if the line buffer is full.
  */
-parser_result_t parser_line_insert(parser_t *parser, char ch);
+cparser_result_t cparser_line_insert(cparser_t *parser, char ch);
 
 /**
  * Delete a character from the line buffer immediately before
@@ -68,10 +73,10 @@ parser_result_t parser_line_insert(parser_t *parser, char ch);
  *
  * \param    parser Pointer to a parser structure.
  *
- * \return   PARSER_OK if succeeded; PARSER_ERR_INVALID_PARAMS if inputs
- *           are invalid; PARSER_ERR_NOT_EXIST if the line buffer is empty.
+ * \return   CPARSER_OK if succeeded; CPARSER_ERR_INVALID_PARAMS if inputs
+ *           are invalid; CPARSER_ERR_NOT_EXIST if the line buffer is empty.
  */
-parser_result_t parser_line_delete(parser_t *parser);
+cparser_result_t cparser_line_delete(cparser_t *parser);
 
 /**
  * Move the current position of the current line to the next character.
@@ -81,7 +86,7 @@ parser_result_t parser_line_delete(parser_t *parser);
  * \return   A character to be fed into parser FSM; NULL if no character
  *           is to be fed.
  */
-char parser_line_next_char(parser_t *parser);
+char cparser_line_next_char(cparser_t *parser);
 
 /**
  * Move the current position of the current line to the previous character.
@@ -91,27 +96,27 @@ char parser_line_next_char(parser_t *parser);
  * \return   A character to be fed into parser FSM; NULL if no character
  *           is to be fed.
  */
-char parser_line_prev_char(parser_t *parser);
+char cparser_line_prev_char(cparser_t *parser);
 
 /**
  * Move the current line to the next line.
  *
  * \param    parser Pointer to the parser structure.
  *
- * \return   PARSER_OK if succeeded; PARSER_ERR_INVALID_PARAMS if inputs
+ * \return   CPARSER_OK if succeeded; CPARSER_ERR_INVALID_PARAMS if inputs
  *           are invalid.
  */
-parser_result_t parser_line_next_line(parser_t *parser);
+cparser_result_t cparser_line_next_line(cparser_t *parser);
 
 /**
  * Move the current line to the previous line.
  *
  * \param    parser Pointer to the parser structure.
  *
- * \return   PARSER_OK if succeeded; PARSER_ERR_INVALID_PARAMS if inputs
+ * \return   CPARSER_OK if succeeded; CPARSER_ERR_INVALID_PARAMS if inputs
  *           are invalid.
  */
-parser_result_t parser_line_prev_line(parser_t *parser);
+cparser_result_t cparser_line_prev_line(cparser_t *parser);
 
 /**
  * Print the current line including the current line.
@@ -123,7 +128,7 @@ parser_result_t parser_line_prev_line(parser_t *parser);
  *
  * \return   None. Crash on failure.
  */
-void parser_line_print(const parser_t *parser, int print_prompt, int new_line);
+void cparser_line_print(const cparser_t *parser, int print_prompt, int new_line);
 
 /**
  * Return the current position of the current line.
@@ -132,7 +137,7 @@ void parser_line_print(const parser_t *parser, int print_prompt, int new_line);
  *
  * \return   Current position of the current line.
  */
-short parser_line_current(const parser_t *parser);
+short cparser_line_current(const cparser_t *parser);
 
 /**
  * Return the last position of the current line.
@@ -142,7 +147,7 @@ short parser_line_current(const parser_t *parser);
  * \return   Last position of the current line. This index points to
  *           the terminating NULL character of the current line.
  */
-short parser_line_last(const parser_t *parser);
+short cparser_line_last(const cparser_t *parser);
 
 /**
  * Return the character of the the current position of the current line.
@@ -151,10 +156,10 @@ short parser_line_last(const parser_t *parser);
  *
  * \return   Character of the current position of the current line.
  */
-char parser_line_current_char(const parser_t *parser);
+char cparser_line_current_char(const cparser_t *parser);
 
-char parser_line_char(const parser_t *parser, short pos);
+char cparser_line_char(const cparser_t *parser, short pos);
 
-parser_result_t parser_line_advance(parser_t *parser);
+cparser_result_t cparser_line_advance(cparser_t *parser);
 
-#endif /* __PARSER_LINE_H__ */
+#endif /* __CPARSER_LINE_H__ */

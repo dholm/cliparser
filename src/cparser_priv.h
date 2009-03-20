@@ -1,7 +1,7 @@
 /**
- * \file     parser_options.h
- * \brief    Parser limits for various objects.
- * \version  \verbatim $Id: parser_options.h 51 2009-03-12 22:33:20Z henry $ \endverbatim
+ * \file     cparser_priv.h
+ * \brief    Private parser definitions.
+ * \version  \verbatim $Id: cparser_priv.h 81 2009-03-20 10:10:22Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -30,43 +30,31 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __parser_options_H__
-#define __parser_options_H__
+#ifndef __CPARSER_PRIV_H__
+#define __CPARSER_PRIV_H__
+
+#include "cparser.h"
+#include "cparser_token.h"
 
 /**
- * Maximum number of character of a command prompt including the 
- * terminating NULL.
+ * A node in the parser tree. It has a node type which determines
+ * what type of token is accepted.
  */
-#define PARSER_MAX_PROMPT         (16)
+struct cparser_node_ {
+    cparser_node_type_t   type;      /**< Token type */ 
+    uint32_t              flags;     /**< Flags */
+    void                  *param;    /**< Token-dependent parameter */
+    char                  *desc;     /**< A per-node description string */
+    /** Pointer to the next sibling in the same level of the tree */
+    cparser_node_t        *sibling;
+    /** Pointer to all its children in the next level of the tree */
+    cparser_node_t        *children;
+};
 
-/**
- * Maximum number of cookies. hack alert - why is this not equal to nested levels??
- */
-#define PARSER_MAX_COOKIES        (4)
+#define CPARSER_NODE_FLAGS_OPT_START          (1 << 0)
+#define CPARSER_NODE_FLAGS_OPT_END            (1 << 1)
+#define CPARSER_NODE_FLAGS_OPT_PARTIAL        (1 << 2)
 
-/**
- * Maximum number of nested sub-mode levels.
- */
-#define PARSER_MAX_NESTED_LEVELS  (2)
+#define VALID_PARSER(p)  (p)
 
-/**
- * Maximum number of characters in one token.
- */
-#define PARSER_MAX_TOKEN_SIZE     (256)
-
-/**
- * Maximum number of token per line.
- */
-#define PARSER_MAX_NUM_TOKENS     (32)
-
-/**
- * Maximum number of lines.
- */
-#define PARSER_MAX_LINES          (3)
-
-/**
- * Maximum number of character per line.
- */
-#define PARSER_MAX_LINE_SIZE      (383)
-
-#endif /* __parser_options_H__ */
+#endif /* __CPARSER_PRIV_H__ */

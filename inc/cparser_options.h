@@ -1,7 +1,7 @@
 /**
- * \file     parser_token_tbl.c
- * \brief    Parser token processing tables.
- * \version  \verbatim $Id: parser_token_tbl.c 51 2009-03-12 22:33:20Z henry $ \endverbatim
+ * \file     cparser_options.h
+ * \brief    Parser limits for various objects.
+ * \version  \verbatim $Id: cparser_options.h 71 2009-03-19 07:27:43Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -30,36 +30,43 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdio.h>
-#include <stdint.h>
-#include "parser.h"
-#include "parser_priv.h"
-#include "parser_token.h"
+#ifndef __CPARSER_OPTIONS_H__
+#define __CPARSER_OPTIONS_H__
 
-parser_match_fn parser_match_fn_tbl[PARSER_MAX_NODES] = {
-    parser_match_root,
-    parser_match_end,
-    parser_match_keyword, 
-    parser_match_string,
-    parser_match_uint,
-    parser_match_int,
-    parser_match_hex,
-    parser_match_float,
-    parser_match_macaddr,
-    parser_match_ipv4addr,
-    parser_match_file
-};
+/**
+ * Maximum number of character of a command prompt including the 
+ * terminating NULL.
+ */
+#define CPARSER_MAX_PROMPT         (16)
 
-parser_complete_fn parser_complete_fn_tbl[PARSER_MAX_NODES] = {
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    parser_complete_file
-};
+/**
+ * Maximum number of cookies. hack alert - why is this not equal to nested levels??
+ */
+#define CPARSER_MAX_COOKIES        (4)
+
+/**
+ * Maximum number of nested sub-mode levels.
+ */
+#define CPARSER_MAX_NESTED_LEVELS  (2)
+
+/**
+ * Maximum number of characters in one token.
+ */
+#define CPARSER_MAX_TOKEN_SIZE     (256)
+
+/**
+ * Maximum number of token per line.
+ */
+#define CPARSER_MAX_NUM_TOKENS     (32)
+
+/**
+ * Maximum number of lines.
+ */
+#define CPARSER_MAX_LINES          (3)
+
+/**
+ * Maximum number of character per line.
+ */
+#define CPARSER_MAX_LINE_SIZE      (383)
+
+#endif /* __CPARSER_OPTIONS_H__ */

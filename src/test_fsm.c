@@ -56,10 +56,10 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
-#include "parser.h"
-#include "parser_priv.h"
-#include "parser_fsm.h"
-#include "parser_tree.h"
+#include "cparser.h"
+#include "cparser_priv.h"
+#include "cparser_fsm.h"
+#include "cparser_tree.h"
 
 typedef int (*test_fn_t)(void);
 
@@ -70,20 +70,20 @@ typedef int (*test_fn_t)(void);
  * \param   parser Pointer to the parser structure to be initialized.
  */
 static void
-test_init_parser (parser_t *parser)
+test_init_parser (cparser_t *parser)
 {
-    parser_result_t rc;
+    cparser_result_t rc;
 
     memset(parser, 0, sizeof(*parser));
-    parser->cfg.root = &parser_root;
+    parser->cfg.root = &cparser_root;
     parser->cfg.ch_complete = '\t';
     parser->cfg.ch_erase = '\b';
     parser->cfg.ch_help = '?';
     parser->cfg.flags = 0;
     strcpy(parser->cfg.prompt, "TEST>> ");
     parser->cfg.fd = STDOUT_FILENO;
-    rc = parser_init(&parser->cfg, parser);
-    assert(PARSER_OK == rc);
+    rc = cparser_init(&parser->cfg, parser);
+    assert(CPARSER_OK == rc);
 }
 
 /**
@@ -95,15 +95,15 @@ test_init_parser (parser_t *parser)
  * \return   1 if succeeded; 0 if failed.
  */
 static int 
-test_input (parser_t *parser, char *input)
+test_input (cparser_t *parser, char *input)
 {
-    parser_result_t rc;
+    cparser_result_t rc;
     int n;
 
     assert(parser && input);
     for (n = 0; n < strlen(input); n++) {
-        rc = parser_fsm_input(parser, input[n]);
-        if (PARSER_OK != rc) {
+        rc = cparser_fsm_input(parser, input[n]);
+        if (CPARSER_OK != rc) {
             printf("ERROR: Fail to input %d-th character.\n", n);
             return 0;
         }
@@ -112,16 +112,16 @@ test_input (parser_t *parser, char *input)
 }
 
 int
-test_state_transition (const char *input, const parser_state_t final_state,
-                       const short token_tos, const parser_token_t *tokens,
+test_state_transition (const char *input, const cparser_state_t final_state,
+                       const short token_tos, const cparser_token_t *tokens,
                        const short current_pos, const short last_good)
 {
-    parser_t parser;
+    cparser_t parser;
     int n;
 
     test_init_parser(&parser);
 
-    if (PARSER_STATE_WHITESPACE != parser.state) {
+    if (CPARSER_STATE_WHITESPACE != parser.state) {
         return 0;
     }
     if (!test_input(&parser, (char *)input)) {
@@ -177,8 +177,8 @@ test_state_transition (const char *input, const parser_state_t final_state,
 static int 
 test_whitespace_space_whitespace (void)
 {
-    parser_token_t token = { -1, 0, "", NULL };
-    return test_state_transition("     ", PARSER_STATE_WHITESPACE, 0, 
+    cparser_token_t token = { -1, 0, "", NULL };
+    return test_state_transition("     ", CPARSER_STATE_WHITESPACE, 0, 
                                  &token, 5, 4);
 }
 
@@ -189,8 +189,8 @@ test_whitespace_space_whitespace (void)
 int
 test_whitespace_char_token (void)
 {
-    parser_token_t token = { 1, 1, "s", NULL };
-    return test_state_transition(" s", PARSER_STATE_TOKEN, 0, 
+    cparser_token_t token = { 1, 1, "s", NULL };
+    return test_state_transition(" s", CPARSER_STATE_TOKEN, 0, 
                                  &token, 2, 1);
 }
 
@@ -202,8 +202,8 @@ test_whitespace_char_token (void)
 int 
 test_token_char_token (void)
 {
-    parser_token_t token = { 2, 4, "show", NULL };
-    return test_state_transition("  show", PARSER_STATE_TOKEN, 0,
+    cparser_token_t token = { 2, 4, "show", NULL };
+    return test_state_transition("  show", CPARSER_STATE_TOKEN, 0,
                                  &token, 6, 5);
 }
 
@@ -214,9 +214,9 @@ test_token_char_token (void)
 int
 test_token_space_whitespace (void)
 {
-    parser_token_t tokens[2] = { { 0, 4, "show", &parser_root },
-                                { -1, 0, "", NULL } };
-    return test_state_transition("show ", PARSER_STATE_WHITESPACE, 1, 
+    cparser_token_t tokens[2] = { { 0, 4, "show", &cparser_root },
+                                  { -1, 0, "", NULL } };
+    return test_state_transition("show ", CPARSER_STATE_WHITESPACE, 1, 
                                  tokens, 5, 4);
 }
 
@@ -227,8 +227,8 @@ test_token_space_whitespace (void)
 int 
 test_whitespace_char_error (void)
 {
-    parser_token_t token = { -1, 0, "", NULL };
-    return test_state_transition("z", PARSER_STATE_ERROR, 0,
+    cparser_token_t token = { -1, 0, "", NULL };
+    return test_state_transition("z", CPARSER_STATE_ERROR, 0,
                                  &token, 1, -1);
 }
 
@@ -239,8 +239,8 @@ test_whitespace_char_error (void)
 int
 test_token_char_error (void)
 {
-    parser_token_t token = { 0, 1, "s", NULL };
-    return test_state_transition("sz", PARSER_STATE_ERROR, 0, &token, 2, 0);
+    cparser_token_t token = { 0, 1, "s", NULL };
+    return test_state_transition("sz", CPARSER_STATE_ERROR, 0, &token, 2, 0);
 }
 
 /**
@@ -250,8 +250,8 @@ test_token_char_error (void)
 int
 test_token_space_error (void)
 {
-    parser_token_t token = { 0, 1, "s", NULL };
-    return test_state_transition("s ", PARSER_STATE_ERROR, 0, &token, 2, 0);
+    cparser_token_t token = { 0, 1, "s", NULL };
+    return test_state_transition("s ", CPARSER_STATE_ERROR, 0, &token, 2, 0);
 }
 
 /**
@@ -260,8 +260,8 @@ test_token_space_error (void)
 int
 test_error_space_error (void)
 {
-    parser_token_t token = { -1, 0, "", NULL };
-    return test_state_transition("z ", PARSER_STATE_ERROR, 0, &token, 2, -1);
+    cparser_token_t token = { -1, 0, "", NULL };
+    return test_state_transition("z ", CPARSER_STATE_ERROR, 0, &token, 2, -1);
 }
 
 /**
@@ -270,8 +270,8 @@ test_error_space_error (void)
 int 
 test_error_char_error (void)
 {
-    parser_token_t token = { -1, 0, "", NULL };
-    return test_state_transition("xyz", PARSER_STATE_ERROR, 0, &token, 3, -1);
+    cparser_token_t token = { -1, 0, "", NULL };
+    return test_state_transition("xyz", CPARSER_STATE_ERROR, 0, &token, 3, -1);
 }
 
 /**
@@ -280,8 +280,8 @@ test_error_char_error (void)
 int 
 test_whitespace_erase_whitespace (void)
 {
-    parser_token_t token = { -1, 0, "", NULL };
-    return test_state_transition("  \b", PARSER_STATE_WHITESPACE, 0, &token, 1, 0);
+    cparser_token_t token = { -1, 0, "", NULL };
+    return test_state_transition("  \b", CPARSER_STATE_WHITESPACE, 0, &token, 1, 0);
 }
 
 /**
@@ -291,8 +291,8 @@ test_whitespace_erase_whitespace (void)
 int 
 test_whitespace_erase_token (void)
 {
-    parser_token_t token = { 0, 4, "show", NULL };
-    return test_state_transition("show \b", PARSER_STATE_TOKEN, 0, &token, 4, 3);
+    cparser_token_t token = { 0, 4, "show", NULL };
+    return test_state_transition("show \b", CPARSER_STATE_TOKEN, 0, &token, 4, 3);
 }
 
 /**
@@ -302,8 +302,8 @@ test_whitespace_erase_token (void)
 int
 test_token_erase_token (void)
 {
-    parser_token_t token = { 0, 3, "sho", NULL };
-    return test_state_transition("show\b", PARSER_STATE_TOKEN, 0, &token, 3, 2);
+    cparser_token_t token = { 0, 3, "sho", NULL };
+    return test_state_transition("show\b", CPARSER_STATE_TOKEN, 0, &token, 3, 2);
 }
 
 /**
@@ -314,35 +314,35 @@ test_token_erase_token (void)
 int
 test_token_erase_whitespace (void)
 {
-    parser_token_t tokens[2] = { { 0, 4, "show", &parser_root },
-                                { -1, 0, "", NULL } };
-    return test_state_transition("show e\b", PARSER_STATE_WHITESPACE, 1, tokens, 5, 4);
+    cparser_token_t tokens[2] = { { 0, 4, "show", &cparser_root },
+                                  { -1, 0, "", NULL } };
+    return test_state_transition("show e\b", CPARSER_STATE_WHITESPACE, 1, tokens, 5, 4);
 }
 
 int
 test_error_erase_error (void)
 {
-    parser_token_t token = { -1, 0, "", NULL };
-    return test_state_transition("xyz\b", PARSER_STATE_ERROR, 0, &token, 2, -1);
+    cparser_token_t token = { -1, 0, "", NULL };
+    return test_state_transition("xyz\b", CPARSER_STATE_ERROR, 0, &token, 2, -1);
 }
 
 int
 test_error_erase_whitespace (void)
 {
-    parser_token_t token1 = { -1, 0, "", NULL };
-    parser_token_t token2[2] = { { 0, 4, "show", &parser_root },
-                                { -1, 0, "", NULL } };
-    if (!test_state_transition("x\b", PARSER_STATE_WHITESPACE, 0, &token1, 0, -1)) {
+    cparser_token_t token1 = { -1, 0, "", NULL };
+    cparser_token_t token2[2] = { { 0, 4, "show", &cparser_root },
+                                  { -1, 0, "", NULL } };
+    if (!test_state_transition("x\b", CPARSER_STATE_WHITESPACE, 0, &token1, 0, -1)) {
         return 0;
     }
-    return test_state_transition("show x\b", PARSER_STATE_WHITESPACE, 1, token2, 5, 4);
+    return test_state_transition("show x\b", CPARSER_STATE_WHITESPACE, 1, token2, 5, 4);
 }
 
 int 
 test_error_erase_token (void)
 {
-    parser_token_t token = { 0, 2, "sh", NULL };
-    return test_state_transition("shx\b", PARSER_STATE_TOKEN, 0, &token, 2, 1);
+    cparser_token_t token = { 0, 2, "sh", NULL };
+    return test_state_transition("shx\b", CPARSER_STATE_TOKEN, 0, &token, 2, 1);
 }
 
 int

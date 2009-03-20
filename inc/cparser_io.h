@@ -1,7 +1,7 @@
 /**
- * \file     parser_io.h
+ * \file     cparser_io.h
  * \brief    Platform-dependent parser I/O routines header and definition.
- * \version  \verbatim $Id: parser_io.h 51 2009-03-12 22:33:20Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_io.h 71 2009-03-19 07:27:43Z henry $ \endverbatim
  *
  * \details  CLI parser library requires some platform-dependent API to
  *           provide access to the terminal. These API can vary greatly
@@ -34,35 +34,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __PARSER_IO_H__
-#define __PARSER_IO_H__
+#ifndef __CPARSER_IO_H__
+#define __CPARSER_IO_H__
 
 /**
- * Character type return by parser_getch().
+ * Character type return by cparser_getch().
  */
 typedef enum {
-    PARSER_CHAR_UNKNOWN = 0, /**< Character that cannot be classified */
-    PARSER_CHAR_REGULAR,     /**< All alpha-numeric + punctuation charcters */
-    PARSER_CHAR_UP_ARROW,    /**< Up arrow (recall previous command) */
-    PARSER_CHAR_DOWN_ARROW,  /**< Down arrow (recall next command) */
-    PARSER_CHAR_LEFT_ARROW,  /**< Left arrow (prev. character in the command) */
-    PARSER_CHAR_RIGHT_ARROW, /**< Right arrow (next character in the command) */
-    PARSER_MAX_CHAR
-} parser_char_t;
+    CPARSER_CHAR_UNKNOWN = 0, /**< Character that cannot be classified */
+    CPARSER_CHAR_REGULAR,     /**< All alpha-numeric + punctuation charcters */
+    CPARSER_CHAR_UP_ARROW,    /**< Up arrow (recall previous command) */
+    CPARSER_CHAR_DOWN_ARROW,  /**< Down arrow (recall next command) */
+    CPARSER_CHAR_LEFT_ARROW,  /**< Left arrow (prev. character in the command) */
+    CPARSER_CHAR_RIGHT_ARROW, /**< Right arrow (next character in the command) */
+    CPARSER_MAX_CHAR
+} cparser_char_t;
 
 /**
  * Initialize I/O interface to the parser.
  *
  * \param    parser Pointer to the parser structure.
  */
-void parser_io_init(parser_t *parser);
+void cparser_io_init(cparser_t *parser);
 
 /**
  * Cleanup I/O interface to the parser.
  *
  * \param    parser Pointer to the parser structure.
  */
-void parser_io_cleanup(parser_t *parser);
+void cparser_io_cleanup(cparser_t *parser);
 
 /**
  * Get a character input from the keyboard.
@@ -70,11 +70,11 @@ void parser_io_cleanup(parser_t *parser);
  * \param    parser Pointer to the parser structure.
  *
  * \retval   ch   Pointer to the returned character code.
- * \retval   type Type of the returned character. If it is PARSER_CHAR_REGULAR,
+ * \retval   type Type of the returned character. If it is CPARSER_CHAR_REGULAR,
  *                *ch holds the ASCII code.
  * \return   None.
  */
-void parser_getch(parser_t *parser, int *ch, parser_char_t *type);
+void cparser_getch(cparser_t *parser, int *ch, cparser_char_t *type);
 
 /**
  * Print a single character to the output file descriptor.
@@ -82,7 +82,7 @@ void parser_getch(parser_t *parser, int *ch, parser_char_t *type);
  * \param   parser Pointer to the parser structure.
  * \param   ch     Character to be printed.
  */
-void parser_putc(const parser_t *parser, const char ch);
+void cparser_putc(const cparser_t *parser, const char ch);
 
 /**
  * Print a character string to the output file descriptor.
@@ -90,6 +90,6 @@ void parser_putc(const parser_t *parser, const char ch);
  * \param   parser Pointer to the parser structure.
  * \param   s      Pointer to the string to be printed.
  */
-void parser_puts(const parser_t *parser, const char *s);
+void cparser_puts(const cparser_t *parser, const char *s);
 
-#endif /* __PARSER_IO_H__ */
+#endif /* __CPARSER_IO_H__ */

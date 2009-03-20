@@ -1,5 +1,5 @@
 # Toplevel make rules
-# $Id: toplevel.mk 54 2009-03-13 08:06:44Z henry $
+# $Id: toplevel.mk 75 2009-03-20 00:18:02Z henry $
 #
 # This file is the top-level make rules for all targets. Each target
 # is uniquely defined by (BS or MS, platform); e.g. (BS, simulation).
@@ -60,16 +60,37 @@ endif
 
 DIR_LIST = $(patsubst %,%.PHONY,$(MODULE_LIST) $(BIN_LIST) $(LIB_LIST))
 
+CLEAN_LIST = $(patsubst %,%.PHONY_CLEAN,$(MODULE_LIST))
+
 $(BUILDDIR):
 	@echo "MKDIR $@"
 	mkdir -p $(BUILDDIR)/obj $(BUILDDIR)/bin $(BUILDDIR)/lib
 
 $(DIR_LIST):
 	@echo "MAKE $(basename $@)"
-	make PLATFORM=$(PLATFORM) MODULE=$(basename $@) DEBUG="$(DEBUG)" ETCFLAGS="$(CFLAGS)" LIBRARY=$(LIBRARY) -C $(basename $@)/src all
+	make PLATFORM=$(PLATFORM) MODULE=$(basename $@) DEBUG="$(DEBUG)" LIBRARY=$(LIBRARY) -C $(basename $@)/src all
 
 $(TEST_LIST):
 	@echo "MAKE TEST $(dir $@):$(notdir $@)..."
-	make PLATFORM=$(PLATFORM) MODULE=$(dir $@) DEBUG="$(DEBUG)" ETCFLAGS="$(CFLAGS)" -C $(dir $@)src -f Makefile.$(notdir $@) all
+	make PLATFORM=$(PLATFORM) MODULE=$(dir $@) DEBUG="$(DEBUG)" -C $(dir $@)src -f Makefile.$(notdir $@) all
 
-all: $(BUILDDIR) $(DIR_LIST) $(TEST_LIST)
+$(CLEAN_LIST):
+	@echo "CLEAN $(basename $@)"
+	make PLATFORM=$(PLATFORM) MODULE=$(basename $@) DEBUG="$(DEBUG)" LIBRARY=$(LIBRARY) -C $(basename $@)/src clean
+
+bin: $(BUILDDIR) $(DIR_LIST)
+
+all: bin $(TEST_LIST)
+
+NIGHTLY_DIR = ./scripts/nightly
+NIGHTLY_UNIT_TEST = env PYTHONPATH=$(NIGHTLY_DIR)/sql_driver $(NIGHTLY_DIR)/unit_tests/nightly_run.py
+
+tests: all
+	$(NIGHTLY_UNIT_TEST) --bin-dir=$(BUILDDIR)/bin $(notdir $(TEST_LIST))
+
+tests_logged: all
+	$(NIGHTLY_UNIT_TEST) --user=root --project=CLI_Parser --target=$(PLATFORM) --bin-dir=$(BUILDDIR)/bin $(TEST_LIST)
+
+clean: $(CLEAN_LIST)
+	@echo "CLEAN $(notdir $(BUILDDIR))"
+	rm -fr $(BUILDDIR)

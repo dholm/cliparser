@@ -1,7 +1,7 @@
 /**
- * \file     parser_fsm.c
+ * \file     cparser_fsm.c
  * \brief    Parser state machine implementation.
- * \version  \verbatim $Id: parser_fsm.c 51 2009-03-12 22:33:20Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_fsm.c 72 2009-03-19 07:30:35Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -32,32 +32,32 @@
 
 #include <assert.h>
 #include <string.h>
-#include "parser.h"
-#include "parser_priv.h"
-#include "parser_fsm.h"
+#include "cparser.h"
+#include "cparser_priv.h"
+#include "cparser_fsm.h"
 
-#define INSERT_TOK_STK(t, ch)  \
+#define INSERT_TOK_STK(t, ch)                           \
     (t)->buf[(t)->token_len] = (ch); (t)->token_len++
-#define DELETE_TOK_STK(t)                                        \
-    (t)->token_len = ((t)->token_len ? (t)->token_len - 1 : 0) ; \
+#define DELETE_TOK_STK(t)                                               \
+    (t)->token_len = ((t)->token_len ? (t)->token_len - 1 : 0) ;        \
     (t)->buf[(t)->token_len] = '\0';
 
 int
-parser_match (const char *token, const int token_len, parser_node_t *parent,
-              parser_node_t **match, int *is_complete)
+cparser_match (const char *token, const int token_len, cparser_node_t *parent,
+               cparser_node_t **match, int *is_complete)
 {
     int num_matches = 0, local_is_complete;
-    parser_node_t *child;
-    parser_result_t rc;
+    cparser_node_t *child;
+    cparser_result_t rc;
 
     assert(token && parent && match && is_complete);
     *match = NULL;
     *is_complete = 0;
     for (child = parent->children; NULL != child; child = child->sibling) {
 	local_is_complete = 0;
-        rc = parser_match_fn_tbl[child->type](token, token_len, child, 
-                                              &local_is_complete);
-        if (PARSER_OK == rc) {
+        rc = cparser_match_fn_tbl[child->type](token, token_len, child, 
+                                               &local_is_complete);
+        if (CPARSER_OK == rc) {
             num_matches++;
             /* 
              * Return only the highest priority match unless the lower 
@@ -82,7 +82,7 @@ parser_match (const char *token, const int token_len, parser_node_t *parent,
      * There is a only one match and it is a keyword. Consider this a 
      * complete match.
      */
-    if ((1 == num_matches) && (PARSER_NODE_KEYWORD == (*match)->type)) {
+    if ((1 == num_matches) && (CPARSER_NODE_KEYWORD == (*match)->type)) {
         *is_complete = 1;
     }
 #endif /* SHORTEST_UNIQUE_KEYWORD */
@@ -97,16 +97,16 @@ parser_match (const char *token, const int token_len, parser_node_t *parent,
  * \return   None.
  */
 static void
-parser_token_stack_reset (parser_t *parser)
+cparser_token_stack_reset (cparser_t *parser)
 {
     int n;
-    parser_token_t *token;
+    cparser_token_t *token;
 
     assert(VALID_PARSER(parser));
     parser->last_good   = -1;
     parser->current_pos = 0;
     parser->token_tos   = 0;
-    for (n = 0; n < PARSER_MAX_NUM_TOKENS; n++) {
+    for (n = 0; n < CPARSER_MAX_NUM_TOKENS; n++) {
         token = &parser->tokens[n];
         token->begin_ptr = -1;
         token->token_len = 0;
@@ -130,10 +130,10 @@ parser_token_stack_reset (parser_t *parser)
  *                        is rejected by the parser FSM.
  * \return   New parser state.
  */
-static parser_state_t
-parser_ws_erase (parser_t *parser, const char ch, int *ch_processed)
+static cparser_state_t
+cparser_ws_erase (cparser_t *parser, const char ch, int *ch_processed)
 {
-    parser_token_t *token;
+    cparser_token_t *token;
 
     assert(parser && ch_processed);
     if (parser->current_pos > 0) {
@@ -152,13 +152,13 @@ parser_ws_erase (parser_t *parser, const char ch, int *ch_processed)
                 token->parent    = NULL;
                 token->buf[0]    = '\0';
                 parser->token_tos--;
-                return PARSER_STATE_TOKEN;
+                return CPARSER_STATE_TOKEN;
             }
 	}
     } else {
 	*ch_processed = 0;
     }
-    return PARSER_STATE_WHITESPACE;
+    return CPARSER_STATE_WHITESPACE;
 }
 
 /**
@@ -174,12 +174,12 @@ parser_ws_erase (parser_t *parser, const char ch, int *ch_processed)
  *                        is rejected by the parser FSM.
  * \return   New parser state.
  */
-static parser_state_t
-parser_ws_space (parser_t *parser, const char ch, int *ch_processed)
+static cparser_state_t
+cparser_ws_space (cparser_t *parser, const char ch, int *ch_processed)
 {
     assert(parser && ch_processed);
     *ch_processed = 1;
-    return PARSER_STATE_WHITESPACE;
+    return CPARSER_STATE_WHITESPACE;
 }
 
 /**
@@ -196,18 +196,18 @@ parser_ws_space (parser_t *parser, const char ch, int *ch_processed)
  *                        is rejected by the parser FSM.
  * \return   New parser state.
  */
-static parser_state_t
-parser_ws_char (parser_t *parser, const char ch, int *ch_processed)
+static cparser_state_t
+cparser_ws_char (cparser_t *parser, const char ch, int *ch_processed)
 {
-    parser_node_t *match;
+    cparser_node_t *match;
     int is_complete;
-    parser_token_t *token;
+    cparser_token_t *token;
 
     assert(parser && ch_processed);
     *ch_processed = 1;
 
-    if (!parser_match(&ch, 1, parser->cur_node, &match, &is_complete)) {
-	return PARSER_STATE_ERROR; /* no token match */
+    if (!cparser_match(&ch, 1, parser->cur_node, &match, &is_complete)) {
+	return CPARSER_STATE_ERROR; /* no token match */
     }
 
     token = CUR_TOKEN(parser);
@@ -215,7 +215,7 @@ parser_ws_char (parser_t *parser, const char ch, int *ch_processed)
 
     /* A valid token found. Add to token stack */
     INSERT_TOK_STK(token, ch);
-    return PARSER_STATE_TOKEN;
+    return CPARSER_STATE_TOKEN;
 }
 
 /**
@@ -232,10 +232,10 @@ parser_ws_char (parser_t *parser, const char ch, int *ch_processed)
  *                        is rejected by the parser FSM.
  * \return   New parser state.
  */
-static parser_state_t
-parser_tok_erase (parser_t *parser, const char ch, int *ch_processed)
+static cparser_state_t
+cparser_tok_erase (cparser_t *parser, const char ch, int *ch_processed)
 {
-    parser_token_t *token;
+    cparser_token_t *token;
 
     assert(parser && ch_processed);
     token = CUR_TOKEN(parser);
@@ -244,9 +244,9 @@ parser_tok_erase (parser_t *parser, const char ch, int *ch_processed)
     *ch_processed = 1;
     if (!token->token_len) {
         token->begin_ptr = -1;
-	return PARSER_STATE_WHITESPACE;
+	return CPARSER_STATE_WHITESPACE;
     }
-    return PARSER_STATE_TOKEN;
+    return CPARSER_STATE_TOKEN;
 }
 
 /**
@@ -263,18 +263,18 @@ parser_tok_erase (parser_t *parser, const char ch, int *ch_processed)
  *                        is rejected by the parser FSM.
  * \return   New parser state.
  */
-static parser_state_t
-parser_tok_space (parser_t *parser, const char ch, int *ch_processed)
+static cparser_state_t
+cparser_tok_space (cparser_t *parser, const char ch, int *ch_processed)
 {
-    parser_node_t *match;
+    cparser_node_t *match;
     int is_complete;
-    parser_token_t *token;
+    cparser_token_t *token;
 
     assert(parser && (' ' == ch) && ch_processed);
     *ch_processed = 1;
     token = CUR_TOKEN(parser);
-    if ((1 <= parser_match(token->buf, token->token_len, 
-			   parser->cur_node, &match, &is_complete)) && 
+    if ((1 <= cparser_match(token->buf, token->token_len, 
+                            parser->cur_node, &match, &is_complete)) && 
 	(is_complete)) {
         /* Save the parent node for this token and "close" the token */
         token->parent = parser->cur_node;
@@ -282,7 +282,7 @@ parser_tok_space (parser_t *parser, const char ch, int *ch_processed)
 
         /* Push it into the stack */
 	parser->token_tos++;
-	assert(PARSER_MAX_NUM_TOKENS > parser->token_tos);
+	assert(CPARSER_MAX_NUM_TOKENS > parser->token_tos);
         token = CUR_TOKEN(parser);
         assert(-1 == token->begin_ptr);
         assert(0 == token->token_len);
@@ -290,9 +290,9 @@ parser_tok_space (parser_t *parser, const char ch, int *ch_processed)
 
         parser->cur_node = match;
 
-	return PARSER_STATE_WHITESPACE;
+	return CPARSER_STATE_WHITESPACE;
     }
-    return PARSER_STATE_ERROR;
+    return CPARSER_STATE_ERROR;
 }
 
 /**
@@ -308,29 +308,29 @@ parser_tok_space (parser_t *parser, const char ch, int *ch_processed)
  *                        is rejected by the parser FSM.
  * \return   New parser state.
  */
-static parser_state_t
-parser_tok_char (parser_t *parser, const char ch, int *ch_processed)
+static cparser_state_t
+cparser_tok_char (cparser_t *parser, const char ch, int *ch_processed)
 {
-    parser_node_t *match;
+    cparser_node_t *match;
     int is_complete;
-    parser_token_t *token;
+    cparser_token_t *token;
 
     assert(parser && ch_processed);
     *ch_processed = 1;
 
     token = CUR_TOKEN(parser);
-    if (token->token_len < PARSER_MAX_TOKEN_SIZE) {
+    if (token->token_len < CPARSER_MAX_TOKEN_SIZE) {
         INSERT_TOK_STK(token, ch);
     } else {
-        return PARSER_STATE_ERROR;
+        return CPARSER_STATE_ERROR;
     }
-    if (!parser_match(token->buf, token->token_len, parser->cur_node, 
-                      &match, &is_complete)) {
+    if (!cparser_match(token->buf, token->token_len, parser->cur_node, 
+                       &match, &is_complete)) {
         DELETE_TOK_STK(token);
-        return PARSER_STATE_ERROR;
+        return CPARSER_STATE_ERROR;
     }
 
-    return PARSER_STATE_TOKEN;
+    return CPARSER_STATE_TOKEN;
 }
 
 /**
@@ -343,8 +343,8 @@ parser_tok_char (parser_t *parser, const char ch, int *ch_processed)
  *                        is rejected by the parser FSM.
  * \return   New parser state.
  */
-static parser_state_t
-parser_err_erase (parser_t *parser, const char ch, int *ch_processed)
+static cparser_state_t
+cparser_err_erase (cparser_t *parser, const char ch, int *ch_processed)
 {
     assert(parser && ch_processed);
     *ch_processed = 1;
@@ -353,14 +353,14 @@ parser_err_erase (parser_t *parser, const char ch, int *ch_processed)
                                       */
     parser->current_pos--;
     if ((parser->last_good + 1) == parser->current_pos) {
-        parser_token_t *token;
+        cparser_token_t *token;
         token = CUR_TOKEN(parser);
         if (token->begin_ptr + token->token_len >= parser->current_pos) {
-            return PARSER_STATE_TOKEN;
+            return CPARSER_STATE_TOKEN;
         }
-        return PARSER_STATE_WHITESPACE;
+        return CPARSER_STATE_WHITESPACE;
     }
-    return PARSER_STATE_ERROR;
+    return CPARSER_STATE_ERROR;
 }
 
 /**
@@ -375,12 +375,12 @@ parser_err_erase (parser_t *parser, const char ch, int *ch_processed)
  *                        is rejected by the parser FSM.
  * \return   New parser state.
  */
-static parser_state_t
-parser_err_space (parser_t *parser, const char ch, int *ch_processed)
+static cparser_state_t
+cparser_err_space (cparser_t *parser, const char ch, int *ch_processed)
 {
     assert(parser && ch_processed);
     *ch_processed = 1;
-    return PARSER_STATE_ERROR;
+    return CPARSER_STATE_ERROR;
 }
 
 /**
@@ -396,27 +396,27 @@ parser_err_space (parser_t *parser, const char ch, int *ch_processed)
  *                        is rejected by the parser FSM.
  * \return   New parser state.
  */
-static parser_state_t
-parser_err_char (parser_t *parser, const char ch, int *ch_processed)
+static cparser_state_t
+cparser_err_char (cparser_t *parser, const char ch, int *ch_processed)
 {
     assert(parser && ch_processed);
     *ch_processed = 1;
-    return PARSER_STATE_ERROR;
+    return CPARSER_STATE_ERROR;
 }
 
 /* Define a table of function based on the (state, input type) */
-typedef parser_state_t (*parser_state_func)(parser_t *parser, char ch, int *ch_processed);
-parser_state_func parser_state_func_tbl[PARSER_MAX_STATES][3] = {
-    { parser_ws_erase,  parser_ws_space,  parser_ws_char }, 
-    { parser_tok_erase, parser_tok_space, parser_tok_char }, 
-    { parser_err_erase, parser_err_space, parser_err_char } };
+typedef cparser_state_t (*cparser_state_func)(cparser_t *parser, char ch, int *ch_processed);
+cparser_state_func cparser_state_func_tbl[CPARSER_MAX_STATES][3] = {
+    { cparser_ws_erase,  cparser_ws_space,  cparser_ws_char }, 
+    { cparser_tok_erase, cparser_tok_space, cparser_tok_char }, 
+    { cparser_err_erase, cparser_err_space, cparser_err_char } };
 
-parser_result_t 
-parser_fsm_input (parser_t *parser, char ch)
+cparser_result_t 
+cparser_fsm_input (cparser_t *parser, char ch)
 {
     int input_type, ch_processed, n, m;
 
-    assert((uint32_t)parser->state < PARSER_MAX_STATES);
+    assert((uint32_t)parser->state < CPARSER_MAX_STATES);
     /*
      * We classify the input into one of 3 classes: backspace (BS),
      * whitespace (SPC), regular characters (CHAR). We also check
@@ -433,9 +433,9 @@ parser_fsm_input (parser_t *parser, char ch)
         assert(0 < parser->current_pos);
 	input_type = 0;
     } else {
-	if (parser->current_pos >= (PARSER_MAX_LINE_SIZE-1)) {
-	    parser_putc(parser, '\a');
-	    return PARSER_OK;
+	if (parser->current_pos >= (CPARSER_MAX_LINE_SIZE-1)) {
+	    cparser_putc(parser, '\a');
+	    return CPARSER_OK;
 	}
 	if (' ' == ch) {
 	    input_type = 1;
@@ -445,70 +445,70 @@ parser_fsm_input (parser_t *parser, char ch)
     }
     ch_processed = 0;
     parser->state = 
-	parser_state_func_tbl[parser->state][input_type](parser, ch, 
-							 &ch_processed);
+	cparser_state_func_tbl[parser->state][input_type](parser, ch, 
+                                                          &ch_processed);
 
     if (ch_processed) {
         if (0 != input_type) {
             parser->current_pos++;
         }
-        if (PARSER_STATE_ERROR != parser->state) {
+        if (CPARSER_STATE_ERROR != parser->state) {
             parser->last_good = parser->current_pos - 1;
         }
     }
 
-    if (parser->cfg.flags & PARSER_FLAGS_DEBUG) {
-        parser_putc(parser, '\n');
+    if (parser->cfg.flags & CPARSER_FLAGS_DEBUG) {
+        cparser_putc(parser, '\n');
 
         /* Print out the state */
         switch (parser->state) {
-            case PARSER_STATE_WHITESPACE:
+            case CPARSER_STATE_WHITESPACE:
             {
-                parser_puts(parser, "State: WHITESPACE\n");
+                cparser_puts(parser, "State: WHITESPACE\n");
                 break;
             }
-            case PARSER_STATE_TOKEN:
+            case CPARSER_STATE_TOKEN:
             {
-                parser_puts(parser, "State: TOKEN\n");
+                cparser_puts(parser, "State: TOKEN\n");
                 break;
             }
-            case PARSER_STATE_ERROR:
+            case CPARSER_STATE_ERROR:
             {
-                parser_puts(parser, "State: ERROR\n");
+                cparser_puts(parser, "State: ERROR\n");
                 break;
             }
             default:
-                parser_puts(parser, "State: UNKNOWN\n");
+                cparser_puts(parser, "State: UNKNOWN\n");
         }
 
         /* Print out the parser internal buffer and token stack */
         for (n = 0; n < parser->current_pos; n++) {
-            parser_putc(parser, parser_line_char(parser, n));
+            cparser_putc(parser, cparser_line_char(parser, n));
         }
-        parser_putc(parser, '\n');
+        cparser_putc(parser, '\n');
 
         for (n = 0; n <= parser->token_tos; n++) {
-            parser_putc(parser, '[');
+            cparser_putc(parser, '[');
             for (m = 0; m <= parser->tokens[n].token_len; m++) {
-                parser_putc(parser, parser->tokens[n].buf[m]);
+                cparser_putc(parser, parser->tokens[n].buf[m]);
             }
-            parser_putc(parser, ']');
-            parser_putc(parser, '\n');
+            cparser_putc(parser, ']');
+            cparser_putc(parser, '\n');
         }
 
         /* Print the line buffer again */
-        parser_line_print(parser, 1, 1);
+        cparser_line_print(parser, 1, 1);
     }
-    return PARSER_OK;
+    return CPARSER_OK;
 }
 
 void
-parser_fsm_reset (parser_t *parser)
+cparser_fsm_reset (cparser_t *parser)
 {
     assert(VALID_PARSER(parser));
 
-    parser_token_stack_reset(parser);
+    cparser_token_stack_reset(parser);
     parser->cur_node = parser->root[parser->root_level];
-    parser->state = PARSER_STATE_WHITESPACE;
+    parser->state = CPARSER_STATE_WHITESPACE;
 }
 
