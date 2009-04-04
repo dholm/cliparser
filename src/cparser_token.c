@@ -1,7 +1,7 @@
 /**
  * \file     cparser_token.c
  * \brief    Parser token parsing and completion routines.
- * \version  \verbatim $Id: cparser_token.c 62 2009-03-15 22:09:50Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_token.c 105 2009-03-26 23:22:58Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -377,34 +377,28 @@ cparser_complete_file (const char *token, const int token_len)
  * cparser_get_string - Token get function for a string.
  */
 cparser_result_t
-cparser_get_string (const char *token, const int token_len, char **val)
+cparser_get_string (const cparser_token_t *token, void *value)
 {
+    char **val = (char **)value;
     assert(token && val);
-    if (!token_len) {
+    if (!token->token_len) {
         *val = NULL;
         return CPARSER_NOT_OK; /* optional argument wasn't provided */
     }
-    *val = (char *)token;
+    *val = (char *)token->buf;
     return CPARSER_OK;
 }
 
 /*
- * cparser_get_uint - Token get function for 32-bit unsigned integer.
+ * cparser_get_uint_internal - Token get function for 32-bit unsigned integer.
  */
-cparser_result_t
-cparser_get_uint (const char *token, const int token_len, uint32_t *val)
+static cparser_result_t
+cparser_get_uint_internal (const char *token, const int token_len, void *value)
 {
     uint32_t new = 0, old, d = 0, n;
-    assert(token && val);
-    if (!token_len) {
-        *val = 0;
-        return CPARSER_NOT_OK; /* optional argument wasn't provided */
-    }
-    if ((1 < token_len) && ('x' == token[1])) {
-	/* Hexadecmial format use cparser_get_hex() */
-	return cparser_get_hex(token, token_len, val);
-    }    
+    uint32_t *val = (uint32_t *)value;
 
+    assert(token && val);
     *val = old = 0;
     for (n = 0; n < token_len; n++) {
 	if (('0' <= token[n]) && ('9' >= token[n])) {
@@ -420,30 +414,47 @@ cparser_get_uint (const char *token, const int token_len, uint32_t *val)
     return CPARSER_OK;
 }
 
+cparser_result_t
+cparser_get_uint (const cparser_token_t *token, void *value)
+{
+    assert(token && value);
+
+    if (!token->token_len) {
+        *((uint32_t *)value) = 0;
+        return CPARSER_NOT_OK; /* optional argument wasn't provided */
+    }
+    if ((1 < token->token_len) && ('x' == token->buf[1])) {
+	/* Hexadecmial format use cparser_get_hex() */
+	return cparser_get_hex(token, value);
+    }
+    return cparser_get_uint_internal(token->buf, token->token_len, value);
+}
+
 /*
  * cparser_get_int - Token get function for 32-bit integer.
  */
 cparser_result_t
-cparser_get_int (const char *token, const int token_len, int32_t *val)
+cparser_get_int (const cparser_token_t *token, void *value)
 {
-    int32_t sign = +1;
+    int32_t sign = +1, *val = (int32_t *)value;
     uint32_t tmp, init_pos = 0;
 
     assert(token && val);
     *val = 0;
-    if (!token_len) {
+    if (!token->token_len) {
         return CPARSER_NOT_OK; /* optional argument wasn't provided */
     }
-    assert(token_len > 0);
-    if ('-' == token[0]) {
+    assert(token->token_len > 0);
+    if ('-' == token->buf[0]) {
 	sign = -1;
 	init_pos = 1;
     }
-    if ('+' == token[0]) {
+    if ('+' == token->buf[0]) {
 	init_pos = 1;
     }
-    if (CPARSER_OK != cparser_get_uint(&token[init_pos], 
-                                       token_len - init_pos, &tmp)) {
+    if (CPARSER_OK != cparser_get_uint_internal(&token->buf[init_pos], 
+                                                token->token_len - init_pos, 
+                                                &tmp)) {
 	return CPARSER_NOT_OK;
     }
     if (+1 == sign) {
@@ -461,25 +472,25 @@ cparser_get_int (const char *token, const int token_len, int32_t *val)
  * cparser_get_hex - Token get function for 32-bit hexadecimal.
  */
 cparser_result_t
-cparser_get_hex (const char *token, const int token_len, uint32_t *val)
+cparser_get_hex (const cparser_token_t *token, void *value)
 {
     int n;
-    uint32_t new = 0, old, d = 0;
+    uint32_t new = 0, old, d = 0, *val = (uint32_t *)value;
 
     assert(token && val);
-    if (!token_len) {
+    if (!token->token_len) {
         *val = 0;
         return CPARSER_NOT_OK; /* optional argument wasn't provided */
     }
-    assert((token_len > 2) && ('0' == token[0]) && ('x' == token[1]));
+    assert((token->token_len > 2) && ('0' == token->buf[0]) && ('x' == token->buf[1]));
     *val = old = 0;
-    for (n = 2; n < token_len; n++) {
-	if (('0' <= token[n]) && ('9' >= token[n])) {
-	    d = token[n] - '0';
-	} else if (('a' <= token[n]) && ('f' >= token[n])) {
-	    d = token[n] - 'a' + 10;
-	} else if (('A' <= token[n]) && ('F' >= token[n])) {
-	    d = token[n] - 'A' + 10;
+    for (n = 2; n < token->token_len; n++) {
+	if (('0' <= token->buf[n]) && ('9' >= token->buf[n])) {
+	    d = token->buf[n] - '0';
+	} else if (('a' <= token->buf[n]) && ('f' >= token->buf[n])) {
+	    d = token->buf[n] - 'a' + 10;
+	} else if (('A' <= token->buf[n]) && ('F' >= token->buf[n])) {
+	    d = token->buf[n] - 'A' + 10;
 	} else {
 	    assert(0); /* not a hex digit! */
 	}
@@ -492,13 +503,15 @@ cparser_get_hex (const char *token, const int token_len, uint32_t *val)
 }
 
 cparser_result_t
-cparser_get_float (const char *token, const int token_len, double *val)
+cparser_get_float (const cparser_token_t *token, void *value)
 {
+    double *val = (double *)value;
+
     assert(token && val);
-    if (!token_len) {
+    if (!token->token_len) {
         return CPARSER_NOT_OK; /* optional argument wasn't provided */
     }
-    if (1 != sscanf(token, "%lf", val)) {
+    if (1 != sscanf(token->buf, "%lf", val)) {
         *val = 0.0;
         return CPARSER_NOT_OK;
     }
@@ -509,15 +522,17 @@ cparser_get_float (const char *token, const int token_len, double *val)
  * cparser_get_macaddr - Token get function for MAC address.
  */
 cparser_result_t
-cparser_get_macaddr (const char *token, const int token_len, cparser_macaddr_t *val)
+cparser_get_macaddr (const cparser_token_t *token, void *value)
 {
     uint32_t a, b, c, d, e, f;
+    cparser_macaddr_t *val = (cparser_macaddr_t *)value;
+
     assert(token && val);
-    if (!token_len) {
+    if (!token->token_len) {
         memset(val, 0, sizeof(*val));
         return CPARSER_NOT_OK; /* optional argument wasn't provided */
     }
-    if ((6 != sscanf(token, "%lx:%lx:%lx:%lx:%lx:%lx", (unsigned long *)&a, 
+    if ((6 != sscanf(token->buf, "%lx:%lx:%lx:%lx:%lx:%lx", (unsigned long *)&a,
                      (unsigned long *)&b, (unsigned long *)&c, 
                      (unsigned long *)&d, (unsigned long *)&e, 
                      (unsigned long *)&f)) ||
@@ -541,15 +556,16 @@ cparser_get_macaddr (const char *token, const int token_len, cparser_macaddr_t *
  * cparser_get_ipv4addr - Token get function for IPv4 address.
  */
 cparser_result_t
-cparser_get_ipv4addr (const char *token, const int token_len, uint32_t *val)
+cparser_get_ipv4addr (const cparser_token_t *token, void *value)
 {
-    uint32_t a, b, c, d;
+    uint32_t a, b, c, d, *val = (uint32_t *)value;
+
     assert(token && val);
-    if (!token_len) {
+    if (!token->token_len) {
         *val = 0;
         return CPARSER_NOT_OK; /* optional argument wasn't provided */
     }
-    if ((4 != sscanf(token, "%lu.%lu.%lu.%lu", (unsigned long *)&a, 
+    if ((4 != sscanf(token->buf, "%lu.%lu.%lu.%lu", (unsigned long *)&a, 
                      (unsigned long *)&b, (unsigned long *)&c, 
                      (unsigned long *)&d)) ||
 	(a > 255) || (b > 255) || (c > 255) || (d > 255)) {
@@ -568,19 +584,20 @@ cparser_get_ipv4addr (const char *token, const int token_len, uint32_t *val)
  * cparser_get_file - Token get function for file path.
  */
 cparser_result_t
-cparser_get_file (const char *token, const int token_len, char **val)
+cparser_get_file (const cparser_token_t *token, void *value)
 {
     struct stat stat_buf;
+    char **val = (char **)value;
 
     assert(token && val);
     *val = NULL;
-    if (!token_len) {
+    if (!token->token_len) {
         return CPARSER_NOT_OK; /* optional argument wasn't provided */
     }
-    if (stat(token, &stat_buf) || !(stat_buf.st_mode & S_IFREG)) {
+    if (stat(token->buf, &stat_buf) || !(stat_buf.st_mode & S_IFREG)) {
 	return CPARSER_NOT_OK;
     }
-    *val = (char *)token;
+    *val = (char *)token->buf;
     return CPARSER_OK;
 }
 

@@ -22,7 +22,7 @@
  *           15. (ERROR,      ERASE) -> WHITESPACE
  *           16. (ERROR,      ERASE) -> TOKEN
  *
- * \version  \verbatim $Id$ \endverbatim
+ * \version  \verbatim $Id: test_fsm.c 115 2009-03-27 09:34:52Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -60,7 +60,11 @@
 #include "cparser_priv.h"
 #include "cparser_fsm.h"
 #include "cparser_tree.h"
+#include "cparser_io.h"
 
+/** 
+ * \brief    Function pointer for a test.
+ */
 typedef int (*test_fn_t)(void);
 
 /**
@@ -80,6 +84,7 @@ test_init_parser (cparser_t *parser)
     parser->cfg.ch_erase = '\b';
     parser->cfg.ch_help = '?';
     parser->cfg.flags = 0;
+    cparser_io_config(parser);
     strcpy(parser->cfg.prompt, "TEST>> ");
     parser->cfg.fd = STDOUT_FILENO;
     rc = cparser_init(&parser->cfg, parser);

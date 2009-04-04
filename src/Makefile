@@ -1,5 +1,5 @@
 # Makefile for parser library.
-# $Id$
+# $Id: Makefile 97 2009-03-25 22:49:30Z henry $
 
 # Copyright (c) 2008, Henry Kwok
 # All rights reserved.

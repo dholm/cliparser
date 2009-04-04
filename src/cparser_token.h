@@ -1,7 +1,7 @@
 /**
  * \file     cparser_token.h
  * \brief    Parser token parsing and completion routine prototypes.
- * \version  \verbatim $Id: cparser_token.h 81 2009-03-20 10:10:22Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_token.h 105 2009-03-26 23:22:58Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -33,6 +33,11 @@
 #ifndef __CPARSER_TOKEN_H__
 #define __CPARSER_TOKEN_H__
 
+#define CPARSER_MAX_NODE_TYPES (16)
+
+/**
+ * Parser node type.
+ */
 typedef enum {
     CPARSER_NODE_ROOT = 0,
     CPARSER_NODE_END,
@@ -52,18 +57,56 @@ typedef enum {
  * 48-bit MAC address.
  */
 typedef struct {
+    /** Six octet holding the MAC address */
     uint8_t octet[6];
 } cparser_macaddr_t;
 
+/**
+ * \brief    Match function pointer.
+ * \details  This function pointer is the prototype of all
+ *           CLI Parser match functions.
+ *
+ * \param    token     Pointer to the token.
+ * \param    token_len Number of valid characters in the token.
+ * \param    node      The parse tree node to be matched against.
+ *
+ * \retval   is_complete Return 1 from if the token matches the entire
+ *                       token; 0 otherwise.
+ * \return   CPARSER_OK if it is a complete or partial match; 
+ *           CPARSER_NOT_OK if it does match the node.
+ */
 typedef cparser_result_t (*cparser_match_fn)(const char *token, 
                                              const int token_len, 
                                              cparser_node_t *node, 
                                              int *is_complete);
+
+/**
+ * \brief    Completion function pointer.
+ * \details  This function pointer is the prototype of all
+ *           CLI Parser match functions.
+ *
+ * \param    token     Pointer to the token.
+ * \param    token_len Number of valid characters in the token.
+ */
 typedef cparser_result_t (*cparser_complete_fn)(const char *token,
                                                 const int token_len);
 
-extern cparser_match_fn cparser_match_fn_tbl[];
-extern cparser_complete_fn cparser_complete_fn_tbl[];
+/**
+ * \brief    Get function pointer.
+ * \details  This function pointer is the prototype of all CLI Parser 
+ *           get functions.
+ *
+ * \param    token     Pointer to the token.
+ *
+ * \retval   val       Pointer to the returned parameter value.
+ * \return   CPARSER_OK if succeeded; CPARSER_NOT_OK otherwise.
+ */
+typedef cparser_result_t (*cparser_get_fn)(const cparser_token_t *token,
+                                           void *val);
+
+extern cparser_match_fn    cparser_match_fn_tbl[CPARSER_MAX_NODE_TYPES];
+extern cparser_complete_fn cparser_complete_fn_tbl[CPARSER_MAX_NODE_TYPES];
+extern cparser_get_fn      cparser_get_fn_tbl[CPARSER_MAX_NODE_TYPES];
 
 /********** Token match functions **********/
 cparser_result_t cparser_match_root(const char *token, const int token_len,
@@ -93,15 +136,13 @@ cparser_result_t cparser_match_file(const char *token, const int token_len,
 cparser_result_t cparser_complete_file(const char *token, const int token_len);
 
 /********** Token get functions **********/
-cparser_result_t cparser_get_string(const char *token, const int token_len, char **val);
-cparser_result_t cparser_get_uint(const char *token, const int token_len, uint32_t *val);
-cparser_result_t cparser_get_int(const char *token, const int token_len, int32_t *val);
-cparser_result_t cparser_get_hex(const char *token, const int token_len, uint32_t *val);
-cparser_result_t cparser_get_float(const char *token, const int token_len, double *val);
-cparser_result_t cparser_get_macaddr(const char *token, const int token_len, 
-                                     cparser_macaddr_t *val);
-cparser_result_t cparser_get_ipv4addr(const char *token, const int token_len, 
-                                      uint32_t *val);
-cparser_result_t cparser_get_file(const char *token, const int token_len, char **val);
+cparser_result_t cparser_get_string(const cparser_token_t *token, void *value);
+cparser_result_t cparser_get_uint(const cparser_token_t *token, void *value);
+cparser_result_t cparser_get_int(const cparser_token_t *token, void *value);
+cparser_result_t cparser_get_hex(const cparser_token_t *token, void *value);
+cparser_result_t cparser_get_float(const cparser_token_t *token, void *value);
+cparser_result_t cparser_get_macaddr(const cparser_token_t *token, void *value);
+cparser_result_t cparser_get_ipv4addr(const cparser_token_t *token, void *value);
+cparser_result_t cparser_get_file(const cparser_token_t *token, void *value);
 
 #endif /* __CPARSER_MATCH_H__ */

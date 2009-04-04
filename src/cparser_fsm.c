@@ -1,7 +1,7 @@
 /**
  * \file     cparser_fsm.c
  * \brief    Parser state machine implementation.
- * \version  \verbatim $Id: cparser_fsm.c 72 2009-03-19 07:30:35Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_fsm.c 120 2009-03-29 00:02:21Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -434,7 +434,7 @@ cparser_fsm_input (cparser_t *parser, char ch)
 	input_type = 0;
     } else {
 	if (parser->current_pos >= (CPARSER_MAX_LINE_SIZE-1)) {
-	    cparser_putc(parser, '\a');
+	    parser->cfg.printc(parser, '\a');
 	    return CPARSER_OK;
 	}
 	if (' ' == ch) {
@@ -458,42 +458,42 @@ cparser_fsm_input (cparser_t *parser, char ch)
     }
 
     if (parser->cfg.flags & CPARSER_FLAGS_DEBUG) {
-        cparser_putc(parser, '\n');
+        parser->cfg.printc(parser, '\n');
 
         /* Print out the state */
         switch (parser->state) {
             case CPARSER_STATE_WHITESPACE:
             {
-                cparser_puts(parser, "State: WHITESPACE\n");
+                parser->cfg.prints(parser, "State: WHITESPACE\n");
                 break;
             }
             case CPARSER_STATE_TOKEN:
             {
-                cparser_puts(parser, "State: TOKEN\n");
+                parser->cfg.prints(parser, "State: TOKEN\n");
                 break;
             }
             case CPARSER_STATE_ERROR:
             {
-                cparser_puts(parser, "State: ERROR\n");
+                parser->cfg.prints(parser, "State: ERROR\n");
                 break;
             }
             default:
-                cparser_puts(parser, "State: UNKNOWN\n");
+                parser->cfg.prints(parser, "State: UNKNOWN\n");
         }
 
         /* Print out the parser internal buffer and token stack */
         for (n = 0; n < parser->current_pos; n++) {
-            cparser_putc(parser, cparser_line_char(parser, n));
+            parser->cfg.printc(parser, cparser_line_char(parser, n));
         }
-        cparser_putc(parser, '\n');
+        parser->cfg.printc(parser, '\n');
 
         for (n = 0; n <= parser->token_tos; n++) {
-            cparser_putc(parser, '[');
+            parser->cfg.printc(parser, '[');
             for (m = 0; m <= parser->tokens[n].token_len; m++) {
-                cparser_putc(parser, parser->tokens[n].buf[m]);
+                parser->cfg.printc(parser, parser->tokens[n].buf[m]);
             }
-            cparser_putc(parser, ']');
-            cparser_putc(parser, '\n');
+            parser->cfg.printc(parser, ']');
+            parser->cfg.printc(parser, '\n');
         }
 
         /* Print the line buffer again */

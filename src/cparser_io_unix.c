@@ -1,7 +1,7 @@
 /**
  * \file     cparser_io_unix.c
  * \brief    Unix-specific parser I/O routines
- * \version  \verbatim $Id: cparser_io_unix.c 72 2009-03-19 07:30:35Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_io_unix.c 120 2009-03-29 00:02:21Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -70,8 +70,8 @@ cparser_term_set_canonical (cparser_t *parser, int enable)
     }
 }
 
-void
-cparser_getch (cparser_t *parser, int *ch, cparser_char_t *type)
+static void
+cparser_unix_getch (cparser_t *parser, int *ch, cparser_char_t *type)
 {
     assert(VALID_PARSER(parser) && ch && type);
     *type = CPARSER_CHAR_UNKNOWN;
@@ -105,28 +105,41 @@ cparser_getch (cparser_t *parser, int *ch, cparser_char_t *type)
     }
 }
 
-void
-cparser_putc (const cparser_t *parser, const char ch)
+static void
+cparser_unix_printc (const cparser_t *parser, const char ch)
 {
+    ssize_t wsize;
     assert(parser);
-    write(parser->cfg.fd, &ch, 1);
+    wsize = write(parser->cfg.fd, &ch, 1);
 }
 
-void
-cparser_puts (const cparser_t *parser, const char *s)
+static void
+cparser_unix_prints (const cparser_t *parser, const char *s)
 {
+    ssize_t wsize;
     assert(parser && s);
-    write(parser->cfg.fd, s, strlen(s));
+    wsize = write(parser->cfg.fd, s, strlen(s));
 }
 
-void 
-cparser_io_init (cparser_t *parser)
+static void 
+cparser_unix_io_init (cparser_t *parser)
 {
     cparser_term_set_canonical(parser, 0);
 }
 
-void
-cparser_io_cleanup (cparser_t *parser)
+static void
+cparser_unix_io_cleanup (cparser_t *parser)
 {
     cparser_term_set_canonical(parser, 1);
+}
+
+void
+cparser_io_config (cparser_t *parser)
+{
+    assert(parser);
+    parser->cfg.io_init    = cparser_unix_io_init;
+    parser->cfg.io_cleanup = cparser_unix_io_cleanup;
+    parser->cfg.getch      = cparser_unix_getch;
+    parser->cfg.printc     = cparser_unix_printc;
+    parser->cfg.prints     = cparser_unix_prints;
 }

@@ -1,7 +1,7 @@
 /**
  * \file     cparser_line.h
  * \brief    Parser line buffer API definitions and prototypes.
- * \version  \verbatim $Id: cparser_line.h 81 2009-03-20 10:10:22Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_line.h 85 2009-03-21 06:56:36Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -41,8 +41,9 @@
  * \details  A parser line represents a line of user input in the parser.
  */
 typedef struct {
-    short  last;      /**< Point to the last character in the line buffer */
-    short  current;   /**< Point to the current character */
+    short  last;      /**< Point to the last character in the line buffer. */
+    short  current;   /**< Point to the current character. */
+    /** Buffer that holds the user input characters. */
     char   buf[CPARSER_MAX_LINE_SIZE+1];
 } cparser_line_t;
 

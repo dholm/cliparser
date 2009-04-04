@@ -1,7 +1,7 @@
 /**
  * \file     cparser_options.h
  * \brief    Parser limits for various objects.
- * \version  \verbatim $Id: cparser_options.h 71 2009-03-19 07:27:43Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_options.h 117 2009-03-28 21:30:12Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -40,14 +40,9 @@
 #define CPARSER_MAX_PROMPT         (16)
 
 /**
- * Maximum number of cookies. hack alert - why is this not equal to nested levels??
- */
-#define CPARSER_MAX_COOKIES        (4)
-
-/**
  * Maximum number of nested sub-mode levels.
  */
-#define CPARSER_MAX_NESTED_LEVELS  (2)
+#define CPARSER_MAX_NESTED_LEVELS  (4)
 
 /**
  * Maximum number of characters in one token.
@@ -62,7 +57,7 @@
 /**
  * Maximum number of lines.
  */
-#define CPARSER_MAX_LINES          (3)
+#define CPARSER_MAX_LINES          (10)
 
 /**
  * Maximum number of character per line.

@@ -1,5 +1,5 @@
 # Makefile for parser FSM test program.
-# $Id$
+# $Id: Makefile.test_parser_fsm 97 2009-03-25 22:49:30Z henry $
 
 # Copyright (c) 2008, Henry Kwok
 # All rights reserved.

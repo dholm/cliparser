@@ -1,7 +1,7 @@
 /**
  * \file     cparser.c
  * \brief    parser top-level API
- * \version  \verbatim $Id: cparser.c 73 2009-03-19 08:04:53Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser.c 129 2009-03-29 21:12:59Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -41,27 +41,47 @@
 #include "cparser_io.h"
 #include "cparser_fsm.h"
 
+/**
+ * \brief    Print the description of a node out.
+ * \details  For keyword nodes,  the keyword itself is printed. For parameter
+ *           nodes, a string of the form <[type]:[parameter]> is printed. For
+ *           end nodes, \<LF\> is printed. This call should never be invoked with
+ *           a root node.
+ *
+ * \param    parser Pointer to the parser structure.
+ * \param    node   Pointer to the node to be printed.
+ */
 static void
 cparser_help_print_node (cparser_t *parser, cparser_node_t *node)
 {
     assert(parser && node);
-    cparser_putc(parser, '\n');
+    parser->cfg.printc(parser, '\n');
     switch (node->type) {
         case CPARSER_NODE_ROOT:
             assert(0); /* this should never happen */
         case CPARSER_NODE_END:
-            cparser_puts(parser, "<LF>");
+            parser->cfg.prints(parser, "<LF>");
             break;
         default:
-            cparser_puts(parser, node->param);
+            parser->cfg.prints(parser, node->param);
             if (node->desc) {
-                cparser_puts(parser, " - ");
-                cparser_puts(parser, node->desc);
+                parser->cfg.prints(parser, " - ");
+                parser->cfg.prints(parser, node->desc);
             }
             break;
     }
 }
 
+/**
+ * \brief    If the command is not complete, attempt to complete the command.
+ *           If there is a complete comamnd, execute the glue (& action) 
+ *           function of a command.
+ *
+ * \param    parser Pointer to the parser structure.
+ *
+ * \return   CPARSER_OK if a valid command is executed; CPARSER_NOT_OK 
+ *           otherwise.
+ */
 static cparser_result_t
 cparser_execute_cmd (cparser_t *parser)
 {
@@ -113,17 +133,18 @@ cparser_execute_cmd (cparser_t *parser)
                 parser->last_good = cparser_line_current(parser);
                 parser->cur_node = match;
             } else {
-                cparser_putc(parser, '\n');
-                m = strlen(parser->prompt[parser->root_level]);
+                parser->cfg.printc(parser, '\n');
+                m = strlen(parser->prompt[parser->root_level]) + 1;
                 for (n = 0; n < m+parser->last_good; n++) {
-                    cparser_putc(parser, ' ');
+                    parser->cfg.printc(parser, ' ');
                 }
-                cparser_putc(parser, '^');
-                cparser_puts(parser, "Incomplete command\n");
+                parser->cfg.printc(parser, '^');
+                parser->cfg.prints(parser, "Incomplete command\n\n");
                     
                 /* Reset the internal buffer, state and cur_node */
                 cparser_fsm_reset(parser);
-                cparser_puts(parser, parser->prompt[parser->root_level]);
+                cparser_line_advance(parser);
+                parser->cfg.prints(parser, parser->prompt[parser->root_level]);
                 return CPARSER_OK;
             }
         }
@@ -148,40 +169,39 @@ cparser_execute_cmd (cparser_t *parser)
 
             /* Execute the glue function */
             parser->cur_node = child;
-            cparser_putc(parser, '\n');
+            parser->cfg.printc(parser, '\n');
             rc = ((cparser_glue_fn)child->param)(parser);
         } else {
             if (parser->token_tos) {
-                cparser_putc(parser, '\n');
+                parser->cfg.printc(parser, '\n');
                 m = strlen(parser->prompt[parser->root_level]);
                 for (n = 0; n < m+parser->last_good; n++) {
-                    cparser_putc(parser, ' ');
+                    parser->cfg.printc(parser, ' ');
                 }
-                cparser_putc(parser, '^');
-                cparser_puts(parser, "Incomplete command\n");
+                parser->cfg.printc(parser, '^');
+                parser->cfg.prints(parser, "Incomplete command\n\n");
             }
                     
             /* Reset FSM states and advance to the next line */
             cparser_fsm_reset(parser);
             cparser_line_advance(parser);
-            cparser_putc(parser, '\n');
-            cparser_puts(parser, parser->prompt[parser->root_level]);
+            parser->cfg.prints(parser, parser->prompt[parser->root_level]);
             return CPARSER_OK;
         }
     } else if (CPARSER_STATE_ERROR == parser->state) {
-        cparser_putc(parser, '\n');
-        m = strlen(parser->prompt[parser->root_level]);
+        parser->cfg.printc(parser, '\n');
+        m = strlen(parser->prompt[parser->root_level]) + 1;
         for (n = 0; n < m+parser->last_good; n++) {
-            cparser_putc(parser, ' ');
+            parser->cfg.printc(parser, ' ');
         }
-        cparser_putc(parser, '^');
-        cparser_puts(parser, "Parse error\n");
+        parser->cfg.printc(parser, '^');
+        parser->cfg.prints(parser, "Parse error\n");
     }
 
     /* Reset FSM states and advance to the next line */
     cparser_fsm_reset(parser);
     cparser_line_advance(parser);
-    cparser_puts(parser, parser->prompt[parser->root_level]);
+    parser->cfg.prints(parser, parser->prompt[parser->root_level]);
     return CPARSER_OK;
 }
 
@@ -213,7 +233,12 @@ cparser_match_prefix (const char *token, const int token_len,
     return CPARSER_OK;
 }
 
-cparser_result_t
+/**
+ * \brief    Generate context-sensitive help.
+ *
+ * \param    parser Pointer to the parser structure.
+ */
+static cparser_result_t
 cparser_help (cparser_t *parser)
 {
     cparser_node_t *node, *match;
@@ -317,7 +342,7 @@ cparser_input (cparser_t *parser, char ch, cparser_char_t ch_type)
         {
             ch = cparser_line_prev_char(parser);
             if (!ch) {
-                cparser_putc(parser, '\a');
+                parser->cfg.printc(parser, '\a');
                 return CPARSER_OK;
             }
             break;
@@ -326,7 +351,7 @@ cparser_input (cparser_t *parser, char ch, cparser_char_t ch_type)
         {
             ch = cparser_line_next_char(parser);
             if (!ch) {
-                cparser_putc(parser, '\a');
+                parser->cfg.printc(parser, '\a');
                 return CPARSER_OK;
             }
             break;
@@ -334,7 +359,7 @@ cparser_input (cparser_t *parser, char ch, cparser_char_t ch_type)
         default:
         {
             /* An unknown character. Alert and continue */
-            cparser_putc(parser, '\a');
+            parser->cfg.printc(parser, '\a');
             return CPARSER_NOT_OK;
         }
     } /* switch (ch_type) */
@@ -348,7 +373,7 @@ cparser_input (cparser_t *parser, char ch, cparser_char_t ch_type)
         switch (parser->state) {
             case CPARSER_STATE_ERROR:
                 /* If we are in ERROR, there cannot be a match. So, just quit */
-                cparser_putc(parser, '\a');
+                parser->cfg.printc(parser, '\a');
                 break;
             case CPARSER_STATE_WHITESPACE:
                 /* 
@@ -432,16 +457,16 @@ cparser_run (cparser_t *parser)
 
     if (!VALID_PARSER(parser)) return CPARSER_ERR_INVALID_PARAMS;
 
-    cparser_io_init(parser);
-    cparser_puts(parser, parser->prompt[parser->root_level]);
+    parser->cfg.io_init(parser);
+    parser->cfg.prints(parser, parser->prompt[parser->root_level]);
     parser->done = 0;
 
     while (!parser->done) {
-        cparser_getch(parser, &ch, &ch_type);
+        parser->cfg.getch(parser, &ch, &ch_type);
         cparser_input(parser, ch, ch_type);
     } /* while not done */
 
-    cparser_io_cleanup(parser);
+    parser->cfg.io_cleanup(parser);
 
     return CPARSER_OK;
 }
@@ -461,8 +486,9 @@ cparser_init (cparser_cfg_t *cfg, cparser_t *parser)
     /* Initialize sub-mode states */
     parser->root_level = 0;
     parser->root[0] = parser->cfg.root;
-    strcpy(parser->prompt[0], parser->cfg.prompt);
-    for (n = 0; n < CPARSER_MAX_COOKIES; n++) {
+    snprintf(parser->prompt[0], sizeof(parser->prompt[0]), "%s", 
+             parser->cfg.prompt);
+    for (n = 0; n < CPARSER_MAX_NESTED_LEVELS; n++) {
         parser->context.cookie[n] = NULL;
     }
     parser->context.parser = parser;
@@ -506,7 +532,8 @@ cparser_submode_enter (cparser_t *parser, void *cookie, char *prompt)
     assert(new_root);
     assert(CPARSER_NODE_ROOT == new_root->type);
     parser->root[parser->root_level] = new_root;
-    strcpy(parser->prompt[parser->root_level], prompt); // hack alert - check length
+    snprintf(parser->prompt[parser->root_level], 
+             sizeof(parser->prompt[parser->root_level]), "%s", prompt);
     parser->context.cookie[parser->root_level] = cookie;
     
     return CPARSER_OK;
@@ -637,6 +664,17 @@ typedef struct help_stack_ {
     cparser_node_t *nodes[CPARSER_MAX_NUM_TOKENS+2];
 } help_stack_t;
 
+/**
+ * \brief    Pre-order walker function used by cparser_help_cmd().
+ * \details  Its main function is to push into the help stack when recurse into
+ *           the next level.
+ *
+ * \param    parser Pointer to the parser structure.
+ * \param    node   Pointer to the current parse tree node.
+ * \param    cookie Pointer to the help stack.
+ *
+ * \return   Return CPARSER_OK always.
+ */
 static cparser_result_t
 cparser_help_pre_walker (cparser_t *parser, cparser_node_t *node, void *cookie)
 {
@@ -649,6 +687,17 @@ cparser_help_pre_walker (cparser_t *parser, cparser_node_t *node, void *cookie)
     return CPARSER_OK;
 }
 
+/**
+ * \brief    Post-order walker function used by cparser_help_cmd().
+ * \details  Its main function is to print out a command description and to
+ *           pop the help stack.
+ *
+ * \param    parser Pointer to the parser structure.
+ * \param    node   Pointer to the current parse tree node.
+ * \param    cookie Pointer to the help stack.
+ *
+ * \return   Return CPARSER_OK always.
+ */
 static cparser_result_t
 cparser_help_post_walker (cparser_t *parser, cparser_node_t *node, void *cookie)
 {
@@ -665,7 +714,7 @@ cparser_help_post_walker (cparser_t *parser, cparser_node_t *node, void *cookie)
                 if (CPARSER_NODE_KEYWORD != hs->nodes[n]->type) {
                     continue;
                 }
-                if (strstr(node->param, hs->filter)) {
+                if (strstr(hs->nodes[n]->param, hs->filter)) {
                     do_print = 1; /* Yes, print it */
                     break;
                 }
@@ -676,24 +725,24 @@ cparser_help_post_walker (cparser_t *parser, cparser_node_t *node, void *cookie)
         if (do_print) {
             cparser_node_t *cur_node;
 
-            cparser_puts(parser, node->desc);
-            cparser_puts(parser, "\r\n");
+            parser->cfg.prints(parser, node->desc);
+            parser->cfg.prints(parser, "\r\n  ");
             for (n = 0; n < hs->tos; n++) {
                 cur_node = hs->nodes[n];
                 if ((CPARSER_NODE_ROOT == cur_node->type) ||
                     (CPARSER_NODE_END == cur_node->type)) {
                     continue;
                 }
-                cparser_puts(parser, cur_node->param);
-                cparser_putc(parser, ' ');
+                parser->cfg.prints(parser, cur_node->param);
+                parser->cfg.printc(parser, ' ');
                 if (cur_node->flags & CPARSER_NODE_FLAGS_OPT_START) {
-                    cparser_puts(parser, "{ ");
+                    parser->cfg.prints(parser, "{ ");
                 }
                 if (cur_node->flags & CPARSER_NODE_FLAGS_OPT_END) {
-                    cparser_puts(parser, "} ");
+                    parser->cfg.prints(parser, "} ");
                 }
             }
-            cparser_puts(parser, "\r\n\n");
+            parser->cfg.prints(parser, "\r\n\n");
         }
     }
 

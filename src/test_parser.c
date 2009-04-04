@@ -3,7 +3,7 @@
  * \brief    Test program for parser library. 
  * \details  This is a test program with a simple CLI that serves as a demo 
  *           as well.
- * \version  \verbatim $Id: test_parser.c 81 2009-03-20 10:10:22Z henry $ \endverbatim
+ * \version  \verbatim $Id: test_parser.c 127 2009-03-29 03:01:37Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -43,9 +43,9 @@
 #include "cparser_tree.h"
 
 /** Zeroize a data structure */
-#define BZERO_OUTPUT memset(output, 0, sizeof(output))
+#define BZERO_OUTPUT memset(output, 0, sizeof(output)); output_ptr = output
 
-extern char output[2000];
+extern char output[2000], *output_ptr;
 extern int interactive;
 int num_passed = 0, num_failed =0;
 
@@ -66,23 +66,58 @@ feed_parser (cparser_t *parser, const char *str)
  * Update pass/fail counters and display a status string 
  */
 static void
-update_result (int pass, const char *test)
+update_result (char *got, const char *expected, const char *test)
 {
-    if (pass) {
+    int failed, n;
+
+    failed = strcmp(got, expected);
+    if (failed) {
+        for (n = 0; n < strlen(expected); n++) {
+            if (got[n] != expected[n]) {
+                printf("Index %d: expected=%c  got=%c\n", n, expected[n], 
+                       got[n]);
+            }
+        }
+    }
+    if (!failed) {
         printf("\nPASS: %s\n", test);
         num_passed++;
     } else {
         printf("\nFAIL: %s\n", test);
         num_failed++;
     }
+    fflush(stdout);
 }
 
+static void
+test_printc (const cparser_t *parser, const char ch)
+{
+    output_ptr += sprintf(output_ptr, "%c", ch);
+}
+
+static void
+test_prints (const cparser_t *parser, const char *s)
+{
+    output_ptr += sprintf(output_ptr, "%s", s);
+}
+
+/**
+ * \brief    Entry point of the program.
+ *
+ * \param    argc Number of arguments.
+ * \param    argv An array of argument strings.
+ *
+ * \return   Return 0.
+ */
 int
 main (int argc, char *argv[])
 {
     cparser_t parser;
     char *config_file = NULL;
-    int ch, debug = 0;
+    int ch, debug = 0, n;
+    cparser_printc_fn printc_fn;
+    cparser_prints_fn prints_fn;
+    cparser_result_t rc;
 
     while (-1 != (ch = getopt(argc, argv, "pic:d"))) {
         switch (ch) {
@@ -114,6 +149,7 @@ main (int argc, char *argv[])
     parser.cfg.flags = (debug ? CPARSER_FLAGS_DEBUG : 0);
     strcpy(parser.cfg.prompt, "TEST>> ");
     parser.cfg.fd = STDOUT_FILENO;
+    cparser_io_config(&parser);
 
     if (CPARSER_OK != cparser_init(&parser.cfg, &parser)) {
         printf("Fail to initialize parser.\n");
@@ -126,50 +162,233 @@ main (int argc, char *argv[])
         cparser_run(&parser);
     } else {
         /* Run the scripted tests */
-        /* Test 1 - WHITESPACE -> TOKEN -> END */
+        /* Test command execution without trailing space */
         BZERO_OUTPUT;
         feed_parser(&parser, "show employees\n");
-        update_result(0 == strcmp(output, "No employee in the roster.\n"),
-                      "WHITESPACE -> TOKEN -> END");
+        update_result(output, "No employee in the roster.\n",
+                      "command without trailing space");
 
-        /* Test 2 - WHITESPACE -> TOKEN -> WHITESPACE -> END */
+        /* Test command execution with trailing space */
         BZERO_OUTPUT;
         feed_parser(&parser, "show employees \n");
-        update_result(0 == strcmp(output, "No employee in the roster.\n"),
-                      "WHITESPACE -> TOKEN -> WHITESPACE -> END");
+        update_result(output, "No employee in the roster.\n",
+                      "command with trailing space");
 
-        /* Test 3 - Test SHORTEST_UNIQUE_KEYWORD */
+        /* Test 'shortest unique keyword' without trailing space  */
         BZERO_OUTPUT;
         feed_parser(&parser, "sh employees a\n");
-        update_result(0 == strcmp(output, "No employee in the roster.\n"),
-                      "shortest unique keyword #1");
+        update_result(output, "No employee in the roster.\n",
+                      "shortest unique keyword without trailing space");
 
-        /* Test 4 - Test SHORTEST_UNIQUE_KEYWORD */
+        /* Test 'shortest unique keyword' with trailing space */
         BZERO_OUTPUT;
         feed_parser(&parser, "sh employees a \n");
-        update_result(0 == strcmp(output, "No employee in the roster.\n"),
-                      "shortest unique keyword #2");
+        update_result(output, "No employee in the roster.\n",
+                      "shortest unique keyword with trailing space");
 
-        /* Test 5 - Command completion */
+        /* Test command completion */
         BZERO_OUTPUT;
-        feed_parser(&parser, "sh\temployees\t a\t\n");
-        update_result(0 == strcmp(output, "No employee in the roster.\n"),
+        feed_parser(&parser, "sh\temp\t a\t\n");
+        update_result(output, "No employee in the roster.\n",
                       "command completion");
 
-        /* Test 6 - Test one command being prefix of another */
-        BZERO_OUTPUT;
-        feed_parser(&parser, "show employees\n");
-        update_result( 0 == strcmp(output, "No employee in the roster.\n"), "prefixing commands #1");
+        /* Test cparser_submode_enter() and cparse_submode_exit() */
+        feed_parser(&parser, "employee 0x1\n");
+        feed_parser(&parser, "name bob\n");
+        feed_parser(&parser, "date-of-birth 11 1 1970\n");
+        feed_parser(&parser, "height 70\n");
+        feed_parser(&parser, "weight 165\n");
+        feed_parser(&parser, "exit\n");
+
+        feed_parser(&parser, "employee 0x3\n");
+        feed_parser(&parser, "name john\n");
+        feed_parser(&parser, "date-of-birth 8 17 1959\n");
+        feed_parser(&parser, "height 80\n");
+        feed_parser(&parser, "weight 220\n");
+        feed_parser(&parser, "exit\n");
 
         BZERO_OUTPUT;
-        feed_parser(&parser, "show employees \n");
-        update_result( 0 == strcmp(output, "No employee in the roster.\n"), "prefixing commands #2");
-
-        BZERO_OUTPUT;
-        /* hack alert - this is not the intention of the test. make a new command that fits */
         feed_parser(&parser, "show employees-by-id 0x0 0x1\n");
-        update_result( 0 == strcmp(output, ""), "prefixing commands #3");
+        update_result(output, 
+                      "bob\n   ID: 0x00000001\n   Height:  70\"   Weight: 165 lbs.\n", 
+                      "prefixing commands");
+        
+        /* Test optional parameters */
+        BZERO_OUTPUT;
+        feed_parser(&parser, "show employees-by-id 0x0\n");
+        update_result(output, 
+                      "bob\n   ID: 0x00000001\n   Height:  70\"   Weight: 165 lbs.\n" 
+                      "john\n   ID: 0x00000003\n   Height:  80\"   Weight: 220 lbs.\n",
+                      "optional parameter");
 
+        /* Test the left arrow key */
+        BZERO_OUTPUT;
+        feed_parser(&parser, "shaw employees-by-id 0x0");
+        for (n = 0; n < 20; n++) {
+            rc = cparser_input(&parser, 0, CPARSER_CHAR_LEFT_ARROW);
+            if (CPARSER_OK != rc) {
+                break;
+            }
+        }
+        if (CPARSER_OK == rc) {
+            feed_parser(&parser, "\b\bow\n");
+            update_result(output, 
+                          "bob\n   ID: 0x00000001\n   Height:  70\"   Weight: 165 lbs.\n" 
+                          "john\n   ID: 0x00000003\n   Height:  80\"   Weight: 220 lbs.\n",
+                          "left arrow #1");
+        } else {
+            printf("\nFAIL: left arrow #1\n");
+            fflush(stdout);
+            num_failed++;
+        }
+
+        BZERO_OUTPUT;
+        for (n = 0; n < 10; n++) {
+            rc = cparser_input(&parser, 0, CPARSER_CHAR_LEFT_ARROW);
+            if (CPARSER_OK != rc) {
+                break;
+            }
+        }
+        if (CPARSER_OK == rc) {
+            feed_parser(&parser, "\n");
+            update_result(output, "", "left arrow #2");
+        } else {
+            printf("\nFAIL: left arrow #2\n");
+            fflush(stdout);
+            num_failed++;
+        }
+        
+        /* Test right arrow key */
+        BZERO_OUTPUT;
+        feed_parser(&parser, "shaw employees-by-id 0x0");
+        for (n = 0; n < 20; n++) {
+            rc = cparser_input(&parser, 0, CPARSER_CHAR_LEFT_ARROW);
+            if (CPARSER_OK != rc) {
+                break;
+            }
+        }
+        if (CPARSER_OK == rc) {
+            feed_parser(&parser, "\b\bow");
+            for (n = 0; n < 20; n++) {
+                rc = cparser_input(&parser, 0, CPARSER_CHAR_RIGHT_ARROW);
+                if (CPARSER_OK != rc) {
+                    break;
+                }
+            }
+        } else {
+            printf("\nFAIL: left arrow #1\n");
+            num_failed++;
+        }
+        if (CPARSER_OK == rc) {
+            feed_parser(&parser, " 0x1\n");
+            update_result(output, 
+                      "bob\n   ID: 0x00000001\n   Height:  70\"   Weight: 165 lbs.\n", 
+                      "right arrow #1");
+        }
+
+        BZERO_OUTPUT;
+        feed_parser(&parser, "show employees-by-id 0x2");
+        for (n = 0; n < 20; n++) {
+            rc = cparser_input(&parser, 0, CPARSER_CHAR_LEFT_ARROW);
+            if (CPARSER_OK != rc) {
+                break;
+            }
+        }
+        if (CPARSER_OK == rc) {
+            for (n = 0; n < 5; n++) {
+                rc = cparser_input(&parser, 0, CPARSER_CHAR_RIGHT_ARROW);
+                if (CPARSER_OK != rc) {
+                    break;
+                }
+            }
+        } else {
+            printf("\nFAIL: right arrow #2\n");
+            num_failed++;
+        }
+        if (CPARSER_OK == rc) {
+            feed_parser(&parser, "\n");
+            update_result(output, 
+                          "john\n   ID: 0x00000003\n   Height:  80\"   Weight: 220 lbs.\n",
+                          "right arrow #2");
+        }
+
+        /* Test context-sensitive help */
+        /* Save the original I/O functions and put in our own to trap output */
+        prints_fn = parser.cfg.prints;
+        printc_fn = parser.cfg.printc;
+        parser.cfg.printc = test_printc;
+        parser.cfg.prints = test_prints;
+
+        BZERO_OUTPUT;
+        feed_parser(&parser, "s?");
+        update_result(output, "s\nshow\nsave\nTEST>> s", 
+                      "context-sensitive help #1");
+
+        /* Reset the output buffer */
+        feed_parser(&parser, "\n");
+        BZERO_OUTPUT;
+
+        feed_parser(&parser, "s\t");
+        update_result(output, "s\nshow\nsave\nTEST>> s", 
+                      "context-sensitive help #2");
+
+        /* Test incomplete commands */
+        feed_parser(&parser, "\n"); /* flush out the last incomplete command */
+        BZERO_OUTPUT;
+        feed_parser(&parser, "s\n");
+        update_result(output, "s\n        ^Incomplete command\n\nTEST>> ",
+                      "Incomplete command #1");
+
+        BZERO_OUTPUT;
+        feed_parser(&parser, "show \n");
+        update_result(output, 
+                      "show \n           ^Incomplete command\n\nTEST>> ",
+                      "Incomplete command #2");
+
+        BZERO_OUTPUT;
+        feed_parser(&parser, "show em\n");
+        update_result(output, 
+                      "show em\n              ^Incomplete command\n\nTEST>> ",
+                      "Incomplete command #3");
+
+        /* Test invalid commands */
+        feed_parser(&parser, "\n"); /* flush out the last incomplete command */
+        BZERO_OUTPUT;
+        feed_parser(&parser, "xyz\n");
+        update_result(output, "xyz\n       ^Parse error\nTEST>> ",
+                      "Invalid command #1");
+
+        BZERO_OUTPUT;
+        feed_parser(&parser, "show xyz\n");
+        update_result(output, "show xyz\n            ^Parse error\nTEST>> ",
+                      "Invalid command #2");
+        
+        /* 
+         * Test cparser_help_cmd() with and without a filter string.
+         * This implicitly tests cparser_walk() as well.
+         */
+        BZERO_OUTPUT;
+        feed_parser(&parser, "help\n");
+        update_result(output, "help\n"
+                      "List a summary of employees.\r\n  show employees \r\n\n"
+                      "List detail records of all employees.\r\n  show employees all \r\n\n"
+                      "List all employees within a certain range of employee ids\r\n  show employees-by-id <UINT:min> { <UINT:max> } \r\n\n"
+                      "Add a new employee or enter the record of an existing employee\r\n  employee <HEX:id> \r\n\n"
+                      "Delete an existing employee\r\n  no employee <HEX:id> \r\n\n"
+                      "Save the current roster to a file\r\n  save roster <STRING:filename> \r\n\n"
+                      "Load roster file\r\n  load roster <FILE:filename> \r\n\n"
+                      "List all available commands with a substring 'filter' in it.\r\n  help { <STRING:filter> } \r\n\n"
+                      "Leave the database\r\n  quit \r\n\n"
+                      "TEST>> ",
+                      "help summary #1");
+
+        BZERO_OUTPUT;
+        feed_parser(&parser, "help roster\n");
+        update_result(output, "help roster\n"
+                      "Save the current roster to a file\r\n  save roster <STRING:filename> \r\n\n"
+                      "Load roster file\r\n  load roster <FILE:filename> \r\n\n"
+                      "TEST>> ",
+                      "help summary #2");
 
         printf("Total=%d  Passed=%d  Failed=%d\n", num_passed + num_failed,
                num_passed, num_failed);

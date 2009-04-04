@@ -1,5 +1,5 @@
 # Top-level Makefile for CLI Parser
-# $Id: Makefile 77 2009-03-20 08:11:11Z henry $
+# $Id: Makefile 96 2009-03-24 03:30:00Z henry $
 
 # Copyright (c) 2008, Henry Kwok
 # All rights reserved.
@@ -38,6 +38,7 @@ help:
 	@echo "unix         - Linux / MAC OS X / UNIX"
 	@echo "unix_dbg     - Linux / MAC OS X / UNIX with debugging"
 	@echo "unix_tests   - Linux / MAC OS X / UNIX with test suite"
+	@echo "dox          - Generate Doxgyen documentation."
 	@echo
 	@echo "To make a target, do 'make [target]' or 'make -s [target]'"
 	@echo "to reduce the amount of make displays."
@@ -52,9 +53,14 @@ unix_dbg:
 unix_tests: unix
 	make -f Makefile.unix tests
 
+# This target does everything that unix_tests does and logs an entry
+# in a MySQL database. To run this target, you must install Python MySQL
+# package.
 unix_tests_logged: unix
 	make -f Makefile.unix tests_logged
 
+# This target generates documentation for CLI Parser. You must have
+# Doxygen (1.5.7 or higher) installed. 
 dox:
 	doxygen doxygen.cfg
 

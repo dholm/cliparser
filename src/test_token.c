@@ -1,7 +1,7 @@
 /**
  * \file     test_token.c
  * \brief    Test program for verifying token parsing routines.
- * \version  \verbatim $Id: test_token.c 62 2009-03-15 22:09:50Z henry $ \endverbatim
+ * \version  \verbatim $Id: test_token.c 105 2009-03-26 23:22:58Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -38,8 +38,21 @@
 #include "cparser_priv.h"
 #include "cparser_token.h"
 
+/** Return the number of elements of an array */
 #define NELEM(a) (sizeof(a)/sizeof(a[0]))
 
+#define SET_TOKEN(t, s)                 \
+    strcpy((t).buf, (s));               \
+    (t).token_len = strlen(s)
+
+/**
+ * \brief    Entry point of the program.
+ *
+ * \param    argc Number of arguments.
+ * \param    argv Array of argument strings.
+ *
+ * \return   Return 0.
+ */
 int main (int argc, char *argv[])
 {
     struct {
@@ -120,6 +133,7 @@ int main (int argc, char *argv[])
     int total_tests = 0, total_passes = 0;
     cparser_result_t result;
     cparser_node_t node;
+    cparser_token_t token;
 
     for (n = 0; n < NELEM(match_testcases); n++) {
         node.type = match_testcases[n].type;
@@ -156,9 +170,10 @@ int main (int argc, char *argv[])
 
     /* String */
     char *str = "hello, world", *str_val;
-    result = cparser_get_string(str, strlen(str), &str_val);
+    SET_TOKEN(token, str);
+    result = cparser_get_string(&token, &str_val);
     num_tests++;
-    if ((CPARSER_OK != result) || (str_val != str)) {
+    if ((CPARSER_OK != result) || (str_val != token.buf)) {
         printf("FAIL: STR01: %s -> %s\n", str, str_val);
     } else {
         printf("PASS: STR01: %s -> %s\n", str, str_val);
@@ -181,9 +196,8 @@ int main (int argc, char *argv[])
     };
     uint32_t uint_val;
     for (n = 0; n < NELEM(get_uint_testcases); n++) {
-        result = cparser_get_uint(get_uint_testcases[n].str,
-                                 strlen(get_uint_testcases[n].str),
-                                 &uint_val);
+        SET_TOKEN(token, get_uint_testcases[n].str);
+        result = cparser_get_uint(&token, &uint_val);
         num_tests++;
         if ((result != get_uint_testcases[n].result) || 
             (uint_val != get_uint_testcases[n].val)) {
@@ -217,9 +231,8 @@ int main (int argc, char *argv[])
     };
     int32_t int_val;
     for (n = 0; n < NELEM(get_int_testcases); n++) {
-        result = cparser_get_int(get_int_testcases[n].str,
-                                 strlen(get_int_testcases[n].str),
-                                 &int_val);
+        SET_TOKEN(token, get_int_testcases[n].str);
+        result = cparser_get_int(&token, &int_val);
         num_tests++;
         if ((result != get_int_testcases[n].result) || 
             (int_val != get_int_testcases[n].val)) {
@@ -243,9 +256,8 @@ int main (int argc, char *argv[])
         { "HEX03", "0x0000001234", CPARSER_OK, 0x1234 },
     };
     for (n = 0; n < NELEM(get_hex_testcases); n++) {
-        result = cparser_get_hex(get_hex_testcases[n].str,
-                                strlen(get_hex_testcases[n].str),
-                                &uint_val);
+        SET_TOKEN(token, get_hex_testcases[n].str);
+        result = cparser_get_hex(&token, &uint_val);
         num_tests++;
         if ((result != get_hex_testcases[n].result) || 
             (uint_val != get_hex_testcases[n].val)) {
@@ -274,9 +286,8 @@ int main (int argc, char *argv[])
     };
     cparser_macaddr_t macaddr;
     for (n = 0; n < NELEM(get_macaddr_testcases); n++) {
-        result = cparser_get_macaddr(get_macaddr_testcases[n].str,
-                                    strlen(get_macaddr_testcases[n].str),
-                                    &macaddr);
+        SET_TOKEN(token, get_macaddr_testcases[n].str);
+        result = cparser_get_macaddr(&token, &macaddr);
         num_tests++;
         if ((result != get_macaddr_testcases[n].result) || 
             (memcmp(&macaddr, get_macaddr_testcases[n].macaddr, 6))) {
@@ -303,9 +314,8 @@ int main (int argc, char *argv[])
     };
     uint32_t ipv4addr;
     for (n = 0; n < NELEM(get_ipv4addr_testcases); n++) {
-        result = cparser_get_ipv4addr(get_ipv4addr_testcases[n].str,
-                                     strlen(get_ipv4addr_testcases[n].str),
-                                     &ipv4addr);
+        SET_TOKEN(token, get_ipv4addr_testcases[n].str);
+        result = cparser_get_ipv4addr(&token, &ipv4addr);
         num_tests++;
         if ((result != get_ipv4addr_testcases[n].result) || 
             (memcmp(&ipv4addr, &get_ipv4addr_testcases[n].ipv4addr, 4))) {
@@ -331,9 +341,8 @@ int main (int argc, char *argv[])
     };
     char *file;
     for (n = 0; n < NELEM(get_file_testcases); n++) {
-        result = cparser_get_file(get_file_testcases[n].str,
-                                 strlen(get_file_testcases[n].str),
-                                 &file);
+        SET_TOKEN(token, get_file_testcases[n].str);
+        result = cparser_get_file(&token, &file);
         num_tests++;
         if ((result != get_file_testcases[n].result) || 
             ((CPARSER_OK == result) && 

@@ -1,7 +1,7 @@
 /**
  * \file     cparser_line.c
  * \brief    Parser line buffer.
- * \version  \verbatim $Id: cparser_line.c 60 2009-03-15 21:56:47Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_line.c 120 2009-03-29 00:02:21Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -80,13 +80,13 @@ cparser_line_insert (cparser_t *parser, char ch)
      * cursor.
      */
     line->buf[line->current] = ch;
-    cparser_putc(parser, ch);
+    parser->cfg.printc(parser, ch);
     line->current++; /* update current position */
-    cparser_puts(parser, LINE_CURRENT(line));
+    parser->cfg.prints(parser, LINE_CURRENT(line));
 
     /* Move cursor back to the current position */
     for (n = line->current; n < line->last; n++) {
-        cparser_putc(parser, '\b');
+        parser->cfg.printc(parser, '\b');
     }
     
     return CPARSER_OK;
@@ -117,11 +117,11 @@ cparser_line_delete (cparser_t *parser)
     line->buf[line->last] = '\0';
 
     /* Update the display */
-    cparser_putc(parser, '\b');
-    cparser_puts(parser, LINE_CURRENT(line));
-    cparser_puts(parser, " \b");
+    parser->cfg.printc(parser, '\b');
+    parser->cfg.prints(parser, LINE_CURRENT(line));
+    parser->cfg.prints(parser, " \b");
     for (n = line->current; n < line->last; n++) {
-        cparser_putc(parser, '\b');
+        parser->cfg.printc(parser, '\b');
     }
     return CPARSER_OK;
 }
@@ -134,17 +134,17 @@ cparser_line_print (const cparser_t *parser, int print_prompt, int new_line)
 
     assert(VALID_PARSER(parser));
     if (new_line) {
-        cparser_putc(parser, '\n');
+        parser->cfg.printc(parser, '\n');
     }
     if (print_prompt) {
-        cparser_puts(parser, parser->prompt[parser->root_level]);
+        parser->cfg.prints(parser, parser->prompt[parser->root_level]);
     }
     line = &parser->lines[parser->cur_line];
-    cparser_puts(parser, line->buf);
+    parser->cfg.prints(parser, line->buf);
 
     /* Move the cursor back the current position */
     for (n = line->current; n < line->last; n++) {
-        cparser_putc(parser, '\b');
+        parser->cfg.printc(parser, '\b');
     }
 }
 
@@ -195,7 +195,7 @@ cparser_line_next_char (cparser_t *parser)
     }
 
     retval = line->buf[line->current];
-    cparser_putc(parser, retval);
+    parser->cfg.printc(parser, retval);
     line->current++;
 
     return retval;
@@ -213,7 +213,7 @@ cparser_line_prev_char (cparser_t *parser)
         return 0;
     }
 
-    cparser_putc(parser, '\b');
+    parser->cfg.printc(parser, '\b');
     line->current--;
 
     return '\b';
@@ -230,7 +230,7 @@ cparser_line_next_line (cparser_t *parser)
 
     /* Erase the current line */
     for (n = 0; n < cparser_line_last(parser); n++) {
-        cparser_puts(parser, "\b \b");
+        parser->cfg.prints(parser, "\b \b");
     }
 
     /* Go to the next line */
@@ -256,7 +256,7 @@ cparser_line_prev_line (cparser_t *parser)
 
     /* Erase the current line */
     for (n = 0; n < cparser_line_last(parser); n++) {
-        cparser_puts(parser, "\b \b");
+        parser->cfg.prints(parser, "\b \b");
     }
 
     /* Go to the previous line */

@@ -1,7 +1,7 @@
 /**
  * \file     cparser_io.h
  * \brief    Platform-dependent parser I/O routines header and definition.
- * \version  \verbatim $Id: cparser_io.h 71 2009-03-19 07:27:43Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_io.h 120 2009-03-29 00:02:21Z henry $ \endverbatim
  *
  * \details  CLI parser library requires some platform-dependent API to
  *           provide access to the terminal. These API can vary greatly
@@ -51,18 +51,25 @@ typedef enum {
 } cparser_char_t;
 
 /**
+ * Configure all I/O functions to their default for a platform.
+ *
+ * \param    parser Pointer to the parser structure.
+ */
+void cparser_io_config(cparser_t *parser);
+
+/**
  * Initialize I/O interface to the parser.
  *
  * \param    parser Pointer to the parser structure.
  */
-void cparser_io_init(cparser_t *parser);
+typedef void (*cparser_io_init_fn)(cparser_t *parser);
 
 /**
  * Cleanup I/O interface to the parser.
  *
  * \param    parser Pointer to the parser structure.
  */
-void cparser_io_cleanup(cparser_t *parser);
+typedef void (*cparser_io_cleanup_fn)(cparser_t *parser);
 
 /**
  * Get a character input from the keyboard.
@@ -74,7 +81,8 @@ void cparser_io_cleanup(cparser_t *parser);
  *                *ch holds the ASCII code.
  * \return   None.
  */
-void cparser_getch(cparser_t *parser, int *ch, cparser_char_t *type);
+typedef void (*cparser_getch_fn)(cparser_t *parser, int *ch, 
+                                 cparser_char_t *type);
 
 /**
  * Print a single character to the output file descriptor.
@@ -82,7 +90,7 @@ void cparser_getch(cparser_t *parser, int *ch, cparser_char_t *type);
  * \param   parser Pointer to the parser structure.
  * \param   ch     Character to be printed.
  */
-void cparser_putc(const cparser_t *parser, const char ch);
+typedef void (*cparser_printc_fn)(const cparser_t *parser, const char ch);
 
 /**
  * Print a character string to the output file descriptor.
@@ -90,6 +98,6 @@ void cparser_putc(const cparser_t *parser, const char ch);
  * \param   parser Pointer to the parser structure.
  * \param   s      Pointer to the string to be printed.
  */
-void cparser_puts(const cparser_t *parser, const char *s);
+typedef void (*cparser_prints_fn)(const cparser_t *parser, const char *s);
 
 #endif /* __CPARSER_IO_H__ */

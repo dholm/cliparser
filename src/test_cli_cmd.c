@@ -41,18 +41,18 @@
 #include "cparser_token.h"
 
 int interactive = 0;
-#define PRINTF(args...)                         \
-    if (interactive) {                          \
-        printf(args);                           \
-    } else {                                    \
-        memset(output, 0, sizeof(output));      \
-        sprintf(output, args);                  \
+#define PRINTF(args...)                                 \
+    if (interactive) {                                  \
+        printf(args);                                   \
+    } else {                                            \
+        output_ptr += sprintf(output_ptr, args);        \
     }
 
 #define MAX_NAME        (128)
 #define MAX_EMPLOYEES   (100)
 #define MAX_TITLE       (32)
 
+char *output_ptr;
 char output[2000]; /* buffer for sprintf */
 
 /**
@@ -227,7 +227,28 @@ cparser_result_t
 cparser_cmd_show_employees_by_id_min_max (cparser_context_t *context, 
                                           uint32_t *min, uint32_t *max)
 {
+    int n, num_shown = 0;
+    uint32_t min_val, max_val;
+
     assert(context && min); /* don't assert on 'max' because it is optional */
+
+    min_val = *min;
+    max_val = (max ? *max : 0xffffffff);
+
+    for (n = 0; n < MAX_EMPLOYEES; n++) {
+        if (!roster[n].id || (min_val > roster[n].id) || 
+            (max_val < roster[n].id)) {
+            continue;
+        }
+        PRINTF("%s\n", roster[n].name);
+        PRINTF("   ID: 0x%08X\n", roster[n].id);
+        PRINTF("   Height: %3d\"   Weight: %3d lbs.\n",
+               (int)roster[n].height, (int)roster[n].weight);
+        num_shown++;
+    }
+    if (!num_shown) {
+        PRINTF("No employee in the roster.\n");
+    }
     return CPARSER_OK;
 }
 
