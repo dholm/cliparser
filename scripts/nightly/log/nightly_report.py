@@ -15,7 +15,6 @@ def usage():
     print 'USAGE: nightly_report.py [OPTIONS] repo1 repo2 ...\n'
     print '--output [-o] DIR    : Output directory.'
     print '--date [-d] DATE     : The ending date of the query.'
-    
 
 class ReportRcFile:
     def __init__(self, out_dir='.'):

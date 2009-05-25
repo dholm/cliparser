@@ -33,6 +33,9 @@ pc-mac-address <MACADDR:addr>
 // Title
 title <STRING:title>
 
+// Security passcode
+passcode <HEX64:passcode>
+
 // List all available commands with a substring 'filter' in it.
 help { <STRING:filter> }
 

@@ -1,5 +1,5 @@
-#!/usr/bin/python
-# $Id: mk_parser.py 110 2009-03-27 00:57:00Z henry $
+#!/usr/bin/env python
+# $Id: mk_parser.py 139 2009-05-25 09:55:58Z henry $
 
 # Copyright (c) 2008-2009, Henry Kwok
 # All rights reserved.
@@ -47,15 +47,19 @@ def DBG(hdr, s):
         
 ## A class of parse tree node
 class Node:
-    TOKENS = [ 'ROOT', 'END', 'KEYWORD', 'STRING', 'UINT', 'INT',
-               'HEX', 'FLOAT', 'MACADDR', 'IPV4ADDR', 'FILE' ]
+    TOKENS = [ 'ROOT', 'END', 'KEYWORD', 'STRING', 'UINT', 'UINT64', 'INT',
+               'INT64', 'HEX', 'HEX64', 'FLOAT', 'MACADDR', 'IPV4ADDR',
+               'FILE' ]
     TYPES = { 'ROOT'       : None,
               'END'        : None,
               'KEYWORD'    : None,
               'STRING'     : 'char *',
               'UINT'       : 'uint32_t ',
+              'UINT64'     : 'uint65_t ',
               'INT'        : 'int32_t ',
+              'INT64'      : 'int64_t ',
               'HEX'        : 'uint32_t ',
+              'HEX64'      : 'uint64_t ',
               'FLOAT'      : 'double ',
               'MACADDR'    : 'cparser_macaddr_t ',
               'IPV4ADDR'   : 'uint32_t ',
@@ -134,13 +138,20 @@ class Node:
     ## Display a summary of the node.
     def display(self, fout=sys.stdout):
         if 'ROOT' == self.type:
-            fout.write('<ROOT> ')
+            fout.write('<ROOT')
         elif 'KEYWORD' == self.type:
-            fout.write('<KEYWORD:%s> ' % self.param)
+            fout.write('<KEYWORD:%s' % self.param)
         elif 'END' == self.type:
-            fout.write('<END> ')
+            fout.write('<END')
         else:
-            fout.write('<%s:%s> ' % (self.type, self.param))
+            fout.write('<%s:%s' % (self.type, self.param))
+        if len(self.flags) > 0:
+            # Create a local copy and strip all CPARSER_NODE_FLAGS_ prefix.
+            tmp_list = self.flags[:]
+            for n in range(0,len(tmp_list)):
+                tmp_list[n] = tmp_list[n].replace('CPARSER_NODE_FLAGS_','')
+            fout.write(tmp_list.__repr__())
+        fout.write('> ')
 
     ##
     # \brief     Walk the tree
@@ -294,10 +305,11 @@ def add_cli(root, line, comment):
     nodes = []
     flags = []
     num_opt_start = 0
+    num_opt_end = 0
 
     # Convert a line into a token list
     line = line.replace('\n','')
-    DBG('\nDBG:add_cli:1>> ', line)
+    DBG('\n  LINE: ', line)
     tokens = line.split(' ')
 
     # Delete all token that is ''
@@ -322,18 +334,31 @@ def add_cli(root, line, comment):
             if not re.search('^[a-zA-Z0-9_-]+$', t):
                 raise ValueError, 'Invalid keyword "%s".' % t
 
+    # Convert tokens to parse tree nodes. '{' and '}' do not produce tree
+    # nodes. But they do affect the flags used in some nodes.
     for t in tokens:
         # Parse each token
         # Look for '{'
         if '{' == t:
+            # In the last node, its flags field is a reference to
+            # 'flags'. So, if we append to it, the last node will get
+            # a new flag.
             flags.append('CPARSER_NODE_FLAGS_OPT_START')
             num_opt_start = num_opt_start + 1
             continue
         # Look for '}'
         if '}' == t:
-            nodes[len(nodes)-1].flags.append('CPARSER_NODE_FLAGS_OPT_END')
+            # See comment in '{' case.
+            flags.append('CPARSER_NODE_FLAGS_OPT_END')
+            num_opt_end = num_opt_end + 1
+            if num_opt_end == num_opt_start:
+                flags.remove('CPARSER_NODE_FLAGS_OPT_PARTIAL')
             continue
-        flags = []
+
+        if num_opt_start > num_opt_end:
+            flags = ['CPARSER_NODE_FLAGS_OPT_PARTIAL',]
+        else:
+            flags = []
         # Look for a parameter 
         m1 = re.search('\<(.+):(.+)\>', t)
         m2 = re.search('\<(.+):(.+):(.+)\>', t)
@@ -354,12 +379,14 @@ def add_cli(root, line, comment):
             nodes.append(Node('KEYWORD', m.group(1), None, flags))
 
     # hack alert - Check that if there are optional parameters, the format is ok
-    DBG('DBG:add_cli:2>> ', tokens)
-
+    
+    DBG('TOKENS: ', tokens)
     if debug:
-        DBG('DBG:add_cli:3>> ', '')
-        for nn in nodes:
+        sys.stdout.write(' NODES: ')
+        for nn in nodes[:-1]:
             nn.display()
+            sys.stdout.write('\n        ')
+        nodes[-1].display()
         sys.stdout.write('\n')
 
     # We need to create the glue function name. Since the path of the node
@@ -371,7 +398,7 @@ def add_cli(root, line, comment):
     
     # Insert them into the parse tree
     for k in range(0, num_opt_start+1):
-        DBG('DBG:add_cli:4>> ', k)
+        DBG('   CLI: ', k)
         num_braces = 0
         drop = False
         cur_node = root
@@ -388,12 +415,14 @@ def add_cli(root, line, comment):
                     drop = True
                 num_braces = num_braces + 1
             if debug:
+                sys.stdout.write('        ')
                 cur_node.display()
                 sys.stdout.write('-> ')
                 n.display()
                 sys.stdout.write('\n')
             cur_node = cur_node.add_child(n)
         if debug:
+            sys.stdout.write('        ')
             cur_node.display()
             sys.stdout.write('-> ')
             end_node.display()

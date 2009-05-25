@@ -1,5 +1,5 @@
 # Toplevel make rules
-# $Id: toplevel.mk 75 2009-03-20 00:18:02Z henry $
+# $Id: toplevel.mk 132 2009-05-07 09:33:05Z henry $
 #
 # This file is the top-level make rules for all targets. Each target
 # is uniquely defined by (BS or MS, platform); e.g. (BS, simulation).
@@ -68,15 +68,15 @@ $(BUILDDIR):
 
 $(DIR_LIST):
 	@echo "MAKE $(basename $@)"
-	make PLATFORM=$(PLATFORM) MODULE=$(basename $@) DEBUG="$(DEBUG)" LIBRARY=$(LIBRARY) -C $(basename $@)/src all
+	$(MAKE) PLATFORM=$(PLATFORM) MODULE=$(basename $@) DEBUG="$(DEBUG)" LIBRARY=$(LIBRARY) -C $(basename $@)/src all
 
 $(TEST_LIST):
 	@echo "MAKE TEST $(dir $@):$(notdir $@)..."
-	make PLATFORM=$(PLATFORM) MODULE=$(dir $@) DEBUG="$(DEBUG)" -C $(dir $@)src -f Makefile.$(notdir $@) all
+	$(MAKE) PLATFORM=$(PLATFORM) MODULE=$(dir $@) DEBUG="$(DEBUG)" -C $(dir $@)src -f Makefile.$(notdir $@) all
 
 $(CLEAN_LIST):
 	@echo "CLEAN $(basename $@)"
-	make PLATFORM=$(PLATFORM) MODULE=$(basename $@) DEBUG="$(DEBUG)" LIBRARY=$(LIBRARY) -C $(basename $@)/src clean
+	$(MAKE) PLATFORM=$(PLATFORM) MODULE=$(basename $@) DEBUG="$(DEBUG)" LIBRARY=$(LIBRARY) -C $(basename $@)/src clean
 
 bin: $(BUILDDIR) $(DIR_LIST)
 

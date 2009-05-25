@@ -72,6 +72,7 @@ typedef struct employee_ {
         uint16_t year;             /**< Year */
     } dob;                         /**< Date of birth */
     char         title[MAX_TITLE]; /**< Job title */
+    uint64_t     passcode;         /**< Passcode */
 } employee_t;
 
 employee_t roster[MAX_EMPLOYEES];
@@ -156,6 +157,29 @@ test_employee_search (employee_t *roster, uint32_t id)
 }
 
 /**
+ * Print an employee record.
+ *
+ * \param    emp Pointer to an employee record.
+ */
+static void
+test_employee_print (employee_t *emp)
+{
+    PRINTF("%s\n", emp->name);
+    PRINTF("   ID: 0x%08X\n", emp->id);
+    PRINTF("   Height: %3d\"   Weight: %3d lbs.\n",
+           (int)emp->height, (int)emp->weight);
+#if 0
+    PRINTF("   Bonus factor: %fx\n", emp->bonus_factor);
+    PRINTF("   PC IPv4 addr: %d.%d.%d.%d\n", 
+           (int)((emp->pc_ip_addr >> 24) & 0xff),
+           (int)((emp->pc_ip_addr >> 16) & 0xff),
+           (int)((emp->pc_ip_addr >> 8) & 0xff),
+           (int)(emp->pc_ip_addr & 0xff));
+    PRINTF("   Passcode:     %16llX\n", emp->passcode);
+#endif
+}
+
+/**
  * Initialize a roster of employee records.
  *
  * \param    roster Pointer to the array of employee records.
@@ -208,10 +232,7 @@ cparser_cmd_show_employees_all (cparser_context_t *context)
         if (!roster[n].id) {
             continue;
         }
-        PRINTF("%s\n", roster[n].name);
-        PRINTF("   ID: 0x%08X\n", roster[n].id);
-        PRINTF("   Height: %3d\"   Weight: %3d lbs.\n",
-               (int)roster[n].height, (int)roster[n].weight);
+        test_employee_print(&roster[n]);
         num_shown++;
     }
     if (!num_shown) {
@@ -403,6 +424,21 @@ cparser_cmd_emp_title_title (cparser_context_t *context, char **title)
 }
 
 /**
+ * Handle "emp -> passcode <HEX64:passcode>"
+ */
+cparser_result_t
+cparser_cmd_emp_passcode_passcode (cparser_context_t *context, uint64_t *passcode)
+{
+    employee_t *emp;
+
+    assert(context && passcode);
+    emp = (employee_t *)context->cookie[1];
+    assert(emp);
+    emp->passcode = *passcode;
+    return CPARSER_OK;
+}
+
+/**
  * Handle "emp -> exit".
  */
 cparser_result_t
@@ -546,4 +582,3 @@ cparser_cmd_quit (cparser_context_t *context)
     assert(context);
     return cparser_quit(context->parser);
 }
-

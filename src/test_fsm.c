@@ -22,7 +22,7 @@
  *           15. (ERROR,      ERASE) -> WHITESPACE
  *           16. (ERROR,      ERASE) -> TOKEN
  *
- * \version  \verbatim $Id: test_fsm.c 115 2009-03-27 09:34:52Z henry $ \endverbatim
+ * \version  \verbatim $Id: test_fsm.c 134 2009-05-07 09:57:15Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -100,7 +100,7 @@ test_init_parser (cparser_t *parser)
  * \return   1 if succeeded; 0 if failed.
  */
 static int 
-test_input (cparser_t *parser, char *input)
+test_input (cparser_t *parser, const char *input)
 {
     cparser_result_t rc;
     int n;
@@ -129,7 +129,7 @@ test_state_transition (const char *input, const cparser_state_t final_state,
     if (CPARSER_STATE_WHITESPACE != parser.state) {
         return 0;
     }
-    if (!test_input(&parser, (char *)input)) {
+    if (!test_input(&parser, input)) {
         return 0;
     }
     if (final_state != parser.state) {

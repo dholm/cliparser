@@ -1,7 +1,7 @@
 /**
  * \file     cparser_token.c
  * \brief    Parser token parsing and completion routines.
- * \version  \verbatim $Id: cparser_token.c 105 2009-03-26 23:22:58Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_token.c 136 2009-05-25 05:38:25Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -114,8 +114,8 @@ cparser_match_string (const char *token, const int token_len,
 }
 
 /*
- * cparser_match_uint - Token matching function for 32-bit unsigned decimals or 
- *     hexadecimals. Match against /[0-9]+|0x[0-9a-fA-F]+/.
+ * cparser_match_uint - Token matching function for 32-bit or 64-bit unsigned 
+ *     decimals or hexadecimals. Match against /[0-9]+|0x[0-9a-fA-F]+/.
  */
 cparser_result_t
 cparser_match_uint (const char *token, const int token_len, 
@@ -123,7 +123,9 @@ cparser_match_uint (const char *token, const int token_len,
 {
     int n, is_dec = 1;
  
-    assert(token && node && (CPARSER_NODE_UINT == node->type) && is_complete);
+    assert(token && node && is_complete && 
+           ((CPARSER_NODE_UINT == node->type) || 
+            (CPARSER_NODE_UINT64 == node->type)));
 
     *is_complete = 0;
     assert(token_len > 0);
@@ -133,7 +135,6 @@ cparser_match_uint (const char *token, const int token_len,
 	*is_complete = 1;
 	return CPARSER_OK;
     }
-
 
     /* The 2nd character (optional) must be 0-9 or 'x' */
     if ('x' == token[1]) {
@@ -167,8 +168,8 @@ cparser_match_uint (const char *token, const int token_len,
 }
 
 /*
- * cparser_match_int - Token matching function for 32-bit signed decimals.
- *     Match against /[01]{0,1}[0-9]+/.
+ * cparser_match_int - Token matching function for 32-bit or 64-bit signed 
+ *     decimals. Match against /[01]{0,1}[0-9]+/.
  */
 cparser_result_t
 cparser_match_int (const char *token, const int token_len, 
@@ -176,7 +177,10 @@ cparser_match_int (const char *token, const int token_len,
 {
     int n;
 
-    assert(token && node && (CPARSER_NODE_INT == node->type) && is_complete);
+    assert(token && node && is_complete &&
+           ((CPARSER_NODE_INT == node->type) || 
+            (CPARSER_NODE_INT64 == node->type)));
+
     *is_complete = 0;
     assert(token_len > 0);
 
@@ -197,7 +201,8 @@ cparser_match_int (const char *token, const int token_len,
 }
 
 /*
- * cparser_match_hex - Token matching function for 32-bit hexadecimals.
+ * cparser_match_hex - Token matching function for 32-bit or 64-bit 
+ *     hexadecimals.
  */
 cparser_result_t
 cparser_match_hex (const char *token, const int token_len, 
@@ -205,7 +210,9 @@ cparser_match_hex (const char *token, const int token_len,
 {
     int n;
 
-    assert(token && node && (CPARSER_NODE_HEX == node->type) && is_complete);
+    assert(token && node && is_complete && 
+           ((CPARSER_NODE_HEX == node->type) || 
+            (CPARSER_NODE_HEX64 == node->type)));
 
     *is_complete = 0;
     assert(token_len > 0);
@@ -414,6 +421,34 @@ cparser_get_uint_internal (const char *token, const int token_len, void *value)
     return CPARSER_OK;
 }
 
+/*
+ * cparser_get_uint64_internal - Token get function for 64-bit unsigned integer.
+ */
+static cparser_result_t
+cparser_get_uint64_internal (const char *token, const int token_len, void *value)
+{
+    uint64_t new = 0, old, d = 0, n;
+    uint64_t *val = (uint64_t *)value;
+
+    assert(token && val);
+    *val = old = 0;
+    for (n = 0; n < token_len; n++) {
+	if (('0' <= token[n]) && ('9' >= token[n])) {
+	    d = token[n] - '0';
+	} else {
+	    assert(0); /* not a hex digit! */
+	}
+	new = (old * 10) + d;
+	if (((new - d) / 10) != old) return CPARSER_NOT_OK;
+	old = new;
+    }
+    *val = new;
+    return CPARSER_OK;
+}
+
+/*
+ * cparser_get_uint - Token get function for 32-bit unsigned integer.
+ */
 cparser_result_t
 cparser_get_uint (const cparser_token_t *token, void *value)
 {
@@ -428,6 +463,25 @@ cparser_get_uint (const cparser_token_t *token, void *value)
 	return cparser_get_hex(token, value);
     }
     return cparser_get_uint_internal(token->buf, token->token_len, value);
+}
+
+/*
+ * cparser_get_uint64 - Token get function for 64-bit unsigned integer.
+ */
+cparser_result_t
+cparser_get_uint64 (const cparser_token_t *token, void *value)
+{
+    assert(token && value);
+
+    if (!token->token_len) {
+        *((uint64_t *)value) = 0;
+        return CPARSER_NOT_OK; /* optional argument wasn't provided */
+    }
+    if ((1 < token->token_len) && ('x' == token->buf[1])) {
+	/* Hexadecmial format use cparser_get_hex64() */
+	return cparser_get_hex64(token, value);
+    }
+    return cparser_get_uint64_internal(token->buf, token->token_len, value);
 }
 
 /*
@@ -469,6 +523,44 @@ cparser_get_int (const cparser_token_t *token, void *value)
 }
 
 /*
+ * cparser_get_int64 - Token get function for 64-bit integer.
+ */
+cparser_result_t
+cparser_get_int64 (const cparser_token_t *token, void *value)
+{
+    int64_t sign = +1, *val = (int64_t *)value;
+    uint64_t tmp, init_pos = 0;
+
+    assert(token && val);
+    *val = 0;
+    if (!token->token_len) {
+        return CPARSER_NOT_OK; /* optional argument wasn't provided */
+    }
+    assert(token->token_len > 0);
+    if ('-' == token->buf[0]) {
+	sign = -1;
+	init_pos = 1;
+    }
+    if ('+' == token->buf[0]) {
+	init_pos = 1;
+    }
+    if (CPARSER_OK != cparser_get_uint64_internal(&token->buf[init_pos], 
+                                                  token->token_len - init_pos, 
+                                                  &tmp)) {
+	return CPARSER_NOT_OK;
+    }
+    if (+1 == sign) {
+	if (tmp > 0x7fffffffffffffffULL) return CPARSER_NOT_OK;
+	*val = (int64_t)tmp;
+    } else {
+	assert(-1 == sign);
+	if (tmp > 0x8000000000000000ULL) return CPARSER_NOT_OK;
+	*val = -((int64_t)tmp);
+    }
+    return CPARSER_OK;
+}
+
+/*
  * cparser_get_hex - Token get function for 32-bit hexadecimal.
  */
 cparser_result_t
@@ -502,6 +594,43 @@ cparser_get_hex (const cparser_token_t *token, void *value)
     return CPARSER_OK;
 }
 
+/*
+ * cparser_get_hex64 - Token get function for 64-bit hexadecimal.
+ */
+cparser_result_t
+cparser_get_hex64 (const cparser_token_t *token, void *value)
+{
+    int n;
+    uint64_t new = 0, old, d = 0, *val = (uint64_t *)value;
+
+    assert(token && val);
+    if (!token->token_len) {
+        *val = 0;
+        return CPARSER_NOT_OK; /* optional argument wasn't provided */
+    }
+    assert((token->token_len > 2) && ('0' == token->buf[0]) && ('x' == token->buf[1]));
+    *val = old = 0;
+    for (n = 2; n < token->token_len; n++) {
+	if (('0' <= token->buf[n]) && ('9' >= token->buf[n])) {
+	    d = token->buf[n] - '0';
+	} else if (('a' <= token->buf[n]) && ('f' >= token->buf[n])) {
+	    d = token->buf[n] - 'a' + 10;
+	} else if (('A' <= token->buf[n]) && ('F' >= token->buf[n])) {
+	    d = token->buf[n] - 'A' + 10;
+	} else {
+	    assert(0); /* not a hex digit! */
+	}
+	new = (old << 4) + d;
+	if (((new - d) >> 4) != old) return CPARSER_NOT_OK;
+	old = new;
+    }
+    *val = new;
+    return CPARSER_OK;
+}
+
+/*
+ * cparser_get_float - Token get function for 64-bit floating point value.
+ */
 cparser_result_t
 cparser_get_float (const cparser_token_t *token, void *value)
 {
@@ -524,7 +653,7 @@ cparser_get_float (const cparser_token_t *token, void *value)
 cparser_result_t
 cparser_get_macaddr (const cparser_token_t *token, void *value)
 {
-    uint32_t a, b, c, d, e, f;
+    unsigned long a, b, c, d, e, f;
     cparser_macaddr_t *val = (cparser_macaddr_t *)value;
 
     assert(token && val);
@@ -532,10 +661,8 @@ cparser_get_macaddr (const cparser_token_t *token, void *value)
         memset(val, 0, sizeof(*val));
         return CPARSER_NOT_OK; /* optional argument wasn't provided */
     }
-    if ((6 != sscanf(token->buf, "%lx:%lx:%lx:%lx:%lx:%lx", (unsigned long *)&a,
-                     (unsigned long *)&b, (unsigned long *)&c, 
-                     (unsigned long *)&d, (unsigned long *)&e, 
-                     (unsigned long *)&f)) ||
+    if ((6 != sscanf(token->buf, "%lx:%lx:%lx:%lx:%lx:%lx", 
+		     &a, &b, &c, &d, &e, &f)) ||
 	(a > 255) || (b > 255) || (c > 255) || (d > 255) || (e > 255) || 
 	(f > 255)) {
 	val->octet[0] = val->octet[1] = val->octet[2] = 
@@ -558,16 +685,15 @@ cparser_get_macaddr (const cparser_token_t *token, void *value)
 cparser_result_t
 cparser_get_ipv4addr (const cparser_token_t *token, void *value)
 {
-    uint32_t a, b, c, d, *val = (uint32_t *)value;
+    unsigned long a, b, c, d;
+    uint32_t *val = (uint32_t *)value;
 
     assert(token && val);
     if (!token->token_len) {
         *val = 0;
         return CPARSER_NOT_OK; /* optional argument wasn't provided */
     }
-    if ((4 != sscanf(token->buf, "%lu.%lu.%lu.%lu", (unsigned long *)&a, 
-                     (unsigned long *)&b, (unsigned long *)&c, 
-                     (unsigned long *)&d)) ||
+    if ((4 != sscanf(token->buf, "%lu.%lu.%lu.%lu", &a, &b, &c, &d)) ||
 	(a > 255) || (b > 255) || (c > 255) || (d > 255)) {
         *val = 0;
 	return CPARSER_NOT_OK;

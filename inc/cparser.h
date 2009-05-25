@@ -1,7 +1,7 @@
 /**
  * \file     cparser.h
  * \brief    Parser library definitions and function prototypes.
- * \version  \verbatim $Id: cparser.h 130 2009-04-03 21:37:09Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser.h 138 2009-05-25 09:50:45Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -83,7 +83,9 @@
  * directory of CLI Parser and issue: <tt>make -s unix</tt>. This
  * will create a build/unix directory which contains a library in
  * lib/libcparser.a and some test and demo programs in bin/. (The -s
- * flag is only used to suppress the actual issued command.)
+ * flag is only used to suppress the actual issued command.) <i>On FreeBSD,
+ * use gmake instead of make.</i> This is needed because I use some gmake
+ * specific feature that is not supported by FreeBSD's make.
  *
  * \section license 4. LICENSING
  *

@@ -1,7 +1,7 @@
 /**
  * \file     cparser_token.h
  * \brief    Parser token parsing and completion routine prototypes.
- * \version  \verbatim $Id: cparser_token.h 105 2009-03-26 23:22:58Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_token.h 136 2009-05-25 05:38:25Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -44,8 +44,11 @@ typedef enum {
     CPARSER_NODE_KEYWORD,
     CPARSER_NODE_STRING,
     CPARSER_NODE_UINT,
+    CPARSER_NODE_UINT64,
     CPARSER_NODE_INT,
+    CPARSER_NODE_INT64,
     CPARSER_NODE_HEX,
+    CPARSER_NODE_HEX64,
     CPARSER_NODE_FLOAT,
     CPARSER_NODE_MACADDR,
     CPARSER_NODE_IPV4ADDR,
@@ -119,10 +122,16 @@ cparser_result_t cparser_match_string(const char *token, const int token_len,
                                       cparser_node_t *node, int *is_complete);
 cparser_result_t cparser_match_uint(const char *token, const int token_len,
                                     cparser_node_t *node, int *is_complete);
+cparser_result_t cparser_match_uint64(const char *token, const int token_len,
+                                      cparser_node_t *node, int *is_complete);
 cparser_result_t cparser_match_int(const char *token, const int token_len,
+                                   cparser_node_t *node, int *is_complete);
+cparser_result_t cparser_match_int64(const char *token, const int token_len,
                                    cparser_node_t *node, int *is_complete);
 cparser_result_t cparser_match_hex(const char *token, const int token_len,
                                    cparser_node_t *node, int *is_complete);
+cparser_result_t cparser_match_hex64(const char *token, const int token_len,
+                                     cparser_node_t *node, int *is_complete);
 cparser_result_t cparser_match_float(const char *token, const int token_len,
                                      cparser_node_t *node, int *is_complete);
 cparser_result_t cparser_match_macaddr(const char *token, const int token_len,
@@ -138,8 +147,11 @@ cparser_result_t cparser_complete_file(const char *token, const int token_len);
 /********** Token get functions **********/
 cparser_result_t cparser_get_string(const cparser_token_t *token, void *value);
 cparser_result_t cparser_get_uint(const cparser_token_t *token, void *value);
+cparser_result_t cparser_get_uint64(const cparser_token_t *token, void *value);
 cparser_result_t cparser_get_int(const cparser_token_t *token, void *value);
+cparser_result_t cparser_get_int64(const cparser_token_t *token, void *value);
 cparser_result_t cparser_get_hex(const cparser_token_t *token, void *value);
+cparser_result_t cparser_get_hex64(const cparser_token_t *token, void *value);
 cparser_result_t cparser_get_float(const cparser_token_t *token, void *value);
 cparser_result_t cparser_get_macaddr(const cparser_token_t *token, void *value);
 cparser_result_t cparser_get_ipv4addr(const cparser_token_t *token, void *value);

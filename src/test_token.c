@@ -1,7 +1,7 @@
 /**
  * \file     test_token.c
  * \brief    Test program for verifying token parsing routines.
- * \version  \verbatim $Id: test_token.c 105 2009-03-26 23:22:58Z henry $ \endverbatim
+ * \version  \verbatim $Id: test_token.c 136 2009-05-25 05:38:25Z henry $ \endverbatim
  */
 /*
  * Copyright (c) 2008, Henry Kwok
@@ -73,14 +73,21 @@ int main (int argc, char *argv[])
         /* String */
         { "STR01", "abc", CPARSER_NODE_STRING, "s", CPARSER_OK, 1 },
         { "STR02", "1234", CPARSER_NODE_STRING, "s", CPARSER_OK, 1 },
-        /* Unsigned integer */
+        /* 32-bit unsigned integer */
         { "UINT01", "1xabc", CPARSER_NODE_UINT, "a", CPARSER_NOT_OK, 0 },
         { "UINT02", "0xabc", CPARSER_NODE_UINT, "a", CPARSER_OK, 1 },
         { "UINT03", "01234", CPARSER_NODE_UINT, "a", CPARSER_OK, 1 },
         { "UINT04", "012abc", CPARSER_NODE_UINT, "a", CPARSER_NOT_OK, 0 },
         { "UINT05", "0x", CPARSER_NODE_UINT, "a", CPARSER_OK, 0 },
         { "UINT06", "1x", CPARSER_NODE_UINT, "a", CPARSER_NOT_OK, 0 },
-        /* Signed integer */
+        /* 64-bit unsigned integer */
+        { "UINT64_01", "1xabc", CPARSER_NODE_UINT, "a", CPARSER_NOT_OK, 0 },
+        { "UINT64_02", "0xabcdef0123456789", CPARSER_NODE_UINT, "a", CPARSER_OK, 1 },
+        { "UINT64_03", "01234567890123456789", CPARSER_NODE_UINT, "a", CPARSER_OK, 1 },
+        { "UINT64_04", "012abc", CPARSER_NODE_UINT, "a", CPARSER_NOT_OK, 0 },
+        { "UINT64_05", "0x", CPARSER_NODE_UINT, "a", CPARSER_OK, 0 },
+        { "UINT64_06", "1x", CPARSER_NODE_UINT, "a", CPARSER_NOT_OK, 0 },
+        /* 32-bit signed integer */
         { "INT01", "123", CPARSER_NODE_INT, "a", CPARSER_OK, 1 },
         { "INT02", "9876543210", CPARSER_NODE_INT, "a", CPARSER_OK, 1},
         { "INT03", "abc", CPARSER_NODE_INT, "a", CPARSER_NOT_OK, 0 },
@@ -89,12 +96,27 @@ int main (int argc, char *argv[])
         { "INT06", "+", CPARSER_NODE_INT, "a", CPARSER_OK, 0 },
         { "INT07", "+5678", CPARSER_NODE_INT, "a", CPARSER_OK, 1 },
         { "INT08", "1324-80", CPARSER_NODE_INT, "a", CPARSER_NOT_OK, 0 },
-        /* Hexadecimal */
+        /* 64-bit signed integer */
+        { "INT64_01", "123", CPARSER_NODE_INT, "a", CPARSER_OK, 1 },
+        { "INT64_02", "98765432109876543210", CPARSER_NODE_INT, "a", CPARSER_OK, 1},
+        { "INT64_03", "abc", CPARSER_NODE_INT, "a", CPARSER_NOT_OK, 0 },
+        { "INT64_04", "-98098054321", CPARSER_NODE_INT, "a", CPARSER_OK, 1 },
+        { "INT64_05", "-", CPARSER_NODE_INT, "a", CPARSER_OK, 0 },
+        { "INT64_06", "+", CPARSER_NODE_INT, "a", CPARSER_OK, 0 },
+        { "INT64_07", "+5678", CPARSER_NODE_INT, "a", CPARSER_OK, 1 },
+        { "INT64_08", "1324-80", CPARSER_NODE_INT, "a", CPARSER_NOT_OK, 0 },
+        /* 32-bit hexadecimal */
         { "HEX01", "0x78abcdef", CPARSER_NODE_HEX, "a", CPARSER_OK, 1 },
         { "HEX02", "0x0123456", CPARSER_NODE_HEX, "a", CPARSER_OK, 1 },
         { "HEX03", "1x1234", CPARSER_NODE_HEX, "a", CPARSER_NOT_OK, 0 },
         { "HEX04", "0x", CPARSER_NODE_HEX, "a", CPARSER_OK, 0 },
         { "HEX05", "0xyz", CPARSER_NODE_HEX, "a", CPARSER_NOT_OK, 0 },
+        /* 64-bit hexadecimal */
+        { "HEX64_01", "0x78abcdef123456789", CPARSER_NODE_HEX, "a", CPARSER_OK, 1 },
+        { "HEX64_02", "0x0123456", CPARSER_NODE_HEX, "a", CPARSER_OK, 1 },
+        { "HEX64_03", "1x1234", CPARSER_NODE_HEX, "a", CPARSER_NOT_OK, 0 },
+        { "HEX64_04", "0x", CPARSER_NODE_HEX, "a", CPARSER_OK, 0 },
+        { "HEX64_05", "0xyz", CPARSER_NODE_HEX, "a", CPARSER_NOT_OK, 0 },        
         /* Float */
         /* MAC address */
         { "MAC01", "0", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
@@ -184,7 +206,7 @@ int main (int argc, char *argv[])
     struct {
         char             *name;
         char             *str;
-        cparser_result_t  result;
+        cparser_result_t result;
         uint32_t         val;
     } get_uint_testcases[] = {
         { "UINT01", "0x1234abCD", CPARSER_OK, 0x1234abcd },
@@ -210,11 +232,46 @@ int main (int argc, char *argv[])
                (unsigned long)uint_val, (unsigned long)uint_val);
     }
 
+    struct {
+        char             *name;
+        char             *str;
+        cparser_result_t result;
+        uint64_t         val;
+    } get_uint64_testcases[] = {
+        { "UINT64_01", "0x1234abCD", CPARSER_OK, 0x1234abcd },
+        { "UINT64_02", "12345678", CPARSER_OK, 12345678 },
+        { "UINT64_03", "0xabcdef1234567890a", CPARSER_NOT_OK, 0 },
+        { "UINT64_04", "98765432109876543210", CPARSER_NOT_OK, 0 },
+        { "UINT64_05", "0x0000001234", CPARSER_OK, 0x1234 },
+        { "UINT64_06", "00000000000001234", CPARSER_OK, 1234 },
+        { "UINT64_07", "0", CPARSER_OK, 0 },
+        { "UINT64_08", "0x0", CPARSER_OK, 0 },
+        { "UINT64_09", "18446744073709551615", CPARSER_OK, 
+          18446744073709551615ULL },
+        { "UINT64_10", "0xffffffffffffffff", CPARSER_OK, 
+          18446744073709551615ULL },
+    };
+    uint64_t uint64_val;
+    for (n = 0; n < NELEM(get_uint64_testcases); n++) {
+        SET_TOKEN(token, get_uint64_testcases[n].str);
+        result = cparser_get_uint64(&token, &uint64_val);
+        num_tests++;
+        if ((result != get_uint64_testcases[n].result) || 
+            (uint64_val != get_uint64_testcases[n].val)) {
+            printf("FAIL: %s: ", get_uint64_testcases[n].name);
+        } else {
+            printf("PASS: %s: ", get_uint64_testcases[n].name);
+            num_passes++;
+        }
+        printf("%s -> %llu (%llX)\n", get_uint64_testcases[n].str, 
+               (unsigned long long)uint64_val, (unsigned long long)uint64_val);
+    }
+
     /* Integer */
     struct {
         char             *name;
         char             *str;
-        cparser_result_t  result;
+        cparser_result_t result;
         int32_t          val;
     } get_int_testcases[] = {
         { "INT01", "123", CPARSER_OK, 123 },
@@ -244,11 +301,44 @@ int main (int argc, char *argv[])
         printf("%s -> %ld\n", get_int_testcases[n].str, (long int)int_val);
     }
 
+    struct {
+        char             *name;
+        char             *str;
+        cparser_result_t result;
+        int64_t          val;
+    } get_int64_testcases[] = {
+        { "INT64_01", "123", CPARSER_OK, 123 },
+        { "INT64_02", "12345678", CPARSER_OK, 12345678 },
+        { "INT64_03", "1234567890012345678900", CPARSER_NOT_OK, 0 },
+        { "INT64_04", "98765432109876543210", CPARSER_NOT_OK, 0 },
+        { "INT64_05", "00000000000001234", CPARSER_OK, 1234 },
+        { "INT64_06", "+000777777", CPARSER_OK, 777777 },
+        { "INT64_07", "-000777777", CPARSER_OK, -777777 },
+        { "INT64_08", "+9223372036854775807", CPARSER_OK, 9223372036854775807LL },
+        { "INT64_09", "+9223372036854775808", CPARSER_NOT_OK, 0 },
+        { "INT64_10", "-9223372036854775808", CPARSER_OK, 0x8000000000000000LL },
+        { "INT64_11", "-9223372036854775809", CPARSER_NOT_OK, 0 },
+    };
+    int64_t int64_val;
+    for (n = 0; n < NELEM(get_int64_testcases); n++) {
+        SET_TOKEN(token, get_int64_testcases[n].str);
+        result = cparser_get_int64(&token, &int64_val);
+        num_tests++;
+        if ((result != get_int64_testcases[n].result) || 
+            (int64_val != get_int64_testcases[n].val)) {
+            printf("FAIL: %s: ", get_int64_testcases[n].name);
+        } else {
+            printf("PASS: %s: ", get_int64_testcases[n].name);
+            num_passes++;
+        }
+        printf("%s -> %lld\n", get_int64_testcases[n].str, (long long int)int64_val);
+    }
+
     /* Hexadecimal */
     struct {
         char             *name;
         char             *str;
-        cparser_result_t  result;
+        cparser_result_t result;
         uint32_t         val;
     } get_hex_testcases[] = {
         { "HEX01", "0x1234abCD", CPARSER_OK, 0x1234abcd },
@@ -270,13 +360,38 @@ int main (int argc, char *argv[])
                (unsigned long)uint_val);
     }
 
+    struct {
+        char             *name;
+        char             *str;
+        cparser_result_t result;
+        uint64_t         val;
+    } get_hex64_testcases[] = {
+        { "HEX64_01", "0x1234abCD", CPARSER_OK, 0x1234abcd },
+        { "HEX64_02", "0xabcdef1234567890a", CPARSER_NOT_OK, 0 },
+        { "HEX64_03", "0x1234567890abcdef", CPARSER_OK, 0x1234567890abcdefULL },
+    };
+    for (n = 0; n < NELEM(get_hex64_testcases); n++) {
+        SET_TOKEN(token, get_hex64_testcases[n].str);
+        result = cparser_get_hex64(&token, &uint64_val);
+        num_tests++;
+        if ((result != get_hex64_testcases[n].result) || 
+            (uint64_val != get_hex64_testcases[n].val)) {
+            printf("FAIL: %s: ", get_hex64_testcases[n].name);
+        } else {
+            printf("PASS: %s: ", get_hex64_testcases[n].name);
+            num_passes++;
+        }
+        printf("%s -> %llX\n", get_hex64_testcases[n].str, 
+               (unsigned long long)uint64_val);
+    }
+
     /* Float */
 
     /* MAC address */
     struct {
         char             *name;
         char             *str;
-        cparser_result_t  result;
+        cparser_result_t result;
         uint8_t          macaddr[6];
     } get_macaddr_testcases[] = {
         { "MAC01", "12:45:89:ab:CD:Ef", CPARSER_OK, 
