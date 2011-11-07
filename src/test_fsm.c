@@ -22,10 +22,10 @@
  *           15. (ERROR,      ERASE) -> WHITESPACE
  *           16. (ERROR,      ERASE) -> TOKEN
  *
- * \version  \verbatim $Id: test_fsm.c 134 2009-05-07 09:57:15Z henry $ \endverbatim
+ * \version  \verbatim $Id: test_fsm.c 142 2011-09-01 05:31:27Z henry $ \endverbatim
  */
 /*
- * Copyright (c) 2008, Henry Kwok
+ * Copyright (c) 2008-2009, Henry Kwok
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

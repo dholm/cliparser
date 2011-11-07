@@ -1,10 +1,10 @@
 /**
  * \file     test_token.c
  * \brief    Test program for verifying token parsing routines.
- * \version  \verbatim $Id: test_token.c 136 2009-05-25 05:38:25Z henry $ \endverbatim
+ * \version  \verbatim $Id: test_token.c 146 2011-09-23 12:44:21Z henry $ \endverbatim
  */
 /*
- * Copyright (c) 2008, Henry Kwok
+ * Copyright (c) 2008-2009, 2011, Henry Kwok
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -46,6 +46,15 @@
     (t).token_len = strlen(s)
 
 /**
+ * \brief    A stub for the real cparser_input().
+ */
+cparser_result_t 
+cparser_input (cparser_t *parser, char ch, cparser_char_t ch_type)
+{
+    return CPARSER_OK;
+}
+
+/**
  * \brief    Entry point of the program.
  *
  * \param    argc Number of arguments.
@@ -55,13 +64,24 @@
  */
 int main (int argc, char *argv[])
 {
+    /* 
+     * A set of list node for a LIST token. The keyword list is:
+     *
+     * all -> configuration -> states -> stats -> memory
+     */
+    cparser_list_node_t list_node_memory = { NULL, "memory" };
+    cparser_list_node_t list_node_stats = { &list_node_memory, "stats" };
+    cparser_list_node_t list_node_states = { &list_node_stats, "states" };
+    cparser_list_node_t list_node_configuration = { &list_node_states, "configuration" };
+    cparser_list_node_t list_node_all = { &list_node_configuration, "all" };
+
     struct {
-        char               *name;
-        char               *str;
+        char                *name;
+        char                *str;
         cparser_node_type_t type;
-        char               *param;
+        void                *param;
         cparser_result_t    result;
-        int                is_complete;
+        int                 is_complete;
     } match_testcases[] = {
         /* Keyword */
         { "KW01", "s", CPARSER_NODE_KEYWORD, "show", CPARSER_OK, 0 },
@@ -147,9 +167,20 @@ int main (int argc, char *argv[])
         { "IP4_07", "1234.1.1.1", CPARSER_NODE_IPV4ADDR, "ipv4", CPARSER_NOT_OK, 0 },
         { "IP4_08", "1.2.3.3.4.5", CPARSER_NODE_IPV4ADDR, "ipv4", CPARSER_NOT_OK, 0 },
         { "IP4_09", "a.b.c.d", CPARSER_NODE_IPV4ADDR, "ipv4", CPARSER_NOT_OK, 0 },
+        { "IP4_10", "172.18.256.1", CPARSER_NODE_IPV4ADDR, "ipv4", CPARSER_NOT_OK, 0 },
+        { "IP4_11", "172.18.0.256", CPARSER_NODE_IPV4ADDR, "ipv4", CPARSER_NOT_OK, 0 },
+        { "IP4_12", "172.18.255.1", CPARSER_NODE_IPV4ADDR, "ipv4", CPARSER_OK, 1 },
+        { "IP4_13", "172.18.0.255", CPARSER_NODE_IPV4ADDR, "ipv4", CPARSER_OK, 1 },
         /* File path */
-        { "FILE01", "test.txt", CPARSER_NODE_FILE, "fname", CPARSER_OK, 1 },
+        { "FILE01", "xyz.txt", CPARSER_NODE_FILE, "fname", CPARSER_OK, 1 },
         { "FILE02", "/usr/include/stdio.h", CPARSER_NODE_FILE, "fname", CPARSER_OK, 1 },
+        /* Keyword list */
+        { "LIST01", "s", CPARSER_NODE_LIST, &list_node_all, CPARSER_OK, 0 },
+        { "LIST02", "stat", CPARSER_NODE_LIST, &list_node_all, CPARSER_OK, 0 },
+        { "LIST03", "state", CPARSER_NODE_LIST, &list_node_all, CPARSER_OK, 1 },
+        { "LIST04", "all", CPARSER_NODE_LIST, &list_node_all, CPARSER_OK, 1 },
+        { "LIST05", "statess", CPARSER_NODE_LIST, &list_node_all, CPARSER_NOT_OK, 0 },
+        { "LIST06", "emory", CPARSER_NODE_LIST, &list_node_all, CPARSER_NOT_OK, 0 }
     };
     int n, is_complete, num_tests = 0, num_passes = 0;
     int total_tests = 0, total_passes = 0;
@@ -163,8 +194,8 @@ int main (int argc, char *argv[])
         is_complete = 0xff;
         assert(cparser_match_fn_tbl[node.type]);
         result = cparser_match_fn_tbl[node.type](match_testcases[n].str, 
-                                                strlen(match_testcases[n].str), 
-                                                &node, &is_complete);
+                                                 strlen(match_testcases[n].str), 
+                                                 &node, &is_complete);
         num_tests++;
 
         if ((result == match_testcases[n].result) && 
@@ -175,7 +206,9 @@ int main (int argc, char *argv[])
             printf("FAIL: %s: ", match_testcases[n].name);
         }
         printf("'%s' -> (%d, %s) -> (%s, %s)\n", match_testcases[n].str,
-               match_testcases[n].type, match_testcases[n].param, 
+               match_testcases[n].type, 
+               (CPARSER_NODE_LIST != match_testcases[n].type ? 
+                (char *)match_testcases[n].param : "<keyword list>"),
                (CPARSER_OK == result ? "OK" : "NOT OK"),
                (is_complete ? "COMPLETE" : "INCOMPLETE"));
     }
@@ -470,6 +503,9 @@ int main (int argc, char *argv[])
         printf("%s -> %s\n", get_file_testcases[n].str, 
                (CPARSER_OK == result ? "OK" : "NOT OK"));
     }
+
+    /* Keyword list */
+    
     printf("Get function tests: %d total. %d passed.\n\n", 
            num_tests, num_passes);
 

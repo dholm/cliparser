@@ -1,10 +1,10 @@
 /**
  * \file     cparser_token.c
  * \brief    Parser token parsing and completion routines.
- * \version  \verbatim $Id: cparser_token.c 136 2009-05-25 05:38:25Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_token.c 151 2011-09-24 06:09:42Z henry $ \endverbatim
  */
 /*
- * Copyright (c) 2008, Henry Kwok
+ * Copyright (c) 2008-2009, 2011, Henry Kwok
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <glob.h>
 #include "cparser.h"
 #include "cparser_priv.h"
 #include "cparser_token.h"
@@ -340,7 +341,11 @@ cparser_match_ipv4addr (const char *token, const int token_len,
 		num_dot++;
 		if (num_dot > 3) return CPARSER_NOT_OK;
 		num_digit = 0;
-	    }
+	    } else if (3 == num_digit) {
+                char a[4] = { token[n-2], token[n-1], token[n] };
+                char b[4] = "255";
+                if (0 < strncmp(a, b, 3)) return CPARSER_NOT_OK;
+            }
 	}
     }
     if ((3 == num_dot) && (0 < num_digit)) *is_complete = 1;
@@ -355,25 +360,132 @@ cparser_result_t
 cparser_match_file (const char *token, const int token_len, 
                     cparser_node_t *node, int *is_complete)
 {
-    assert(token && node && (CPARSER_NODE_FILE == node->type));
+    assert(token && node && (CPARSER_NODE_FILE == node->type) && is_complete);
     *is_complete = 1;
     return CPARSER_OK;
 }
 
+/*
+ * cparser_match_list - Token matching function for a LIST token.
+ */
+cparser_result_t
+cparser_match_list (const char *token, const int token_len, 
+                    cparser_node_t *node, int *is_complete)
+{
+    cparser_list_node_t *lnode;
+    unsigned int num_matches = 0;
+    assert(token && node && (CPARSER_NODE_LIST == node->type) && is_complete);
+    
+    lnode = (cparser_list_node_t *)node->param;
+    assert(lnode);
+    while (lnode) {
+        if (!strncmp(token, lnode->keyword, token_len)) {
+            num_matches++;
+        }
+        lnode = lnode->next;
+    }
+    *is_complete = (1 == num_matches ? 1 : 0);
+
+    return (num_matches ? CPARSER_OK : CPARSER_NOT_OK);
+}
+
 /***********************************************************************
  * TOKEN COMPLETE FUNCTIONS - These functions are used by 
- *     cparser_complete() to provide context-sensitive help on 
- *     parameters.
+ *     cparser_complete_one_level() to provide context-sensitive 
+ *     completion.
  ***********************************************************************/
+cparser_result_t
+cparser_complete_keyword (cparser_t *parser, const cparser_node_t *node,
+                          const char *token, const int token_len)
+{
+    int rc;
+    char *ch_ptr;
+
+    assert(parser && node && token && (CPARSER_NODE_KEYWORD == node->type));
+    ch_ptr = node->param + token_len;
+    while (*ch_ptr) {
+        rc = cparser_input(parser, *ch_ptr, CPARSER_CHAR_REGULAR);
+        assert(CPARSER_OK == rc);
+        ch_ptr++;
+    }
+    return CPARSER_OK;
+}
+
 /*
  * cparser_complete_file - Token complete function for a file path.
  */
 cparser_result_t
-cparser_complete_file (const char *token, const int token_len)
+cparser_complete_file (cparser_t *parser, const cparser_node_t *node,
+                       const char *token, const int token_len)
 {
-    assert(token && token_len);
-    /* hack alert - fill in the real thing later */
+    int rc, n;
+    glob_t matches;
+
+    assert(parser && node && token && (CPARSER_NODE_FILE == node->type) && token_len);
+
+    /* Check if there is any files that matches this */
+    rc = glob(token, 0, NULL, &matches);
+    if (rc) {
+        globfree(&matches);
+        return CPARSER_NOT_OK;
+    }
+
+    /* If there is exactly one match, complete it */
+    if (1 == matches.gl_pathc) {
+        size_t path_len = strlen(matches.gl_pathv[0]);
+        for (n = token_len; n < path_len; n++) {
+            rc = cparser_input(parser, matches.gl_pathv[0][n], CPARSER_CHAR_REGULAR);
+            assert(CPARSER_OK == rc);            
+        }
+    }
+    /* hack alert - add support for multiple partial matches */
     return CPARSER_OK;
+}
+
+/*
+ * cparser_complete_list - Token complete function for a LIST token.
+ */
+cparser_result_t
+cparser_complete_list (cparser_t *parser, const cparser_node_t *node,
+                       const char *token, const int token_len)
+{
+    cparser_list_node_t *lnode, *match_lnode = NULL;
+    int match_len = -1, n;
+    cparser_result_t rc = CPARSER_NOT_OK;
+
+    assert(parser && node && token && (CPARSER_NODE_LIST == node->type) && token_len);
+    /* Find the longest common suffix if it exists */
+    for (lnode = node->param; NULL != lnode; lnode = lnode->next) {
+        if (!strncmp(lnode->keyword, token, token_len)) {
+            /* Prefix matches. See what is the longest suffix */
+            if (-1 == match_len) {
+                /* First match. Cover the whole thing */
+                match_len = strlen(lnode->keyword);
+                assert(!match_lnode);
+                match_lnode = lnode;
+            } else {
+                /* Second and after matches. Intersect with previous match */
+                for (n = token_len; n < match_len; n++) {
+                    if (lnode->keyword[n] != match_lnode->keyword[n]) {
+                        break;
+                    }
+                }
+                match_len = n;
+            }
+        }
+    }
+
+    /* If a common prefix is found, input it */
+    if (0 < match_len) {
+        assert(match_lnode);
+        for (n = token_len; n < match_len; n++) {
+            rc = cparser_input(parser, match_lnode->keyword[n], CPARSER_CHAR_REGULAR);
+            assert(CPARSER_OK == rc);
+        }
+        rc = CPARSER_OK;
+    }
+
+    return rc;
 }
 
 /***********************************************************************
@@ -727,3 +839,40 @@ cparser_get_file (const cparser_token_t *token, void *value)
     return CPARSER_OK;
 }
 
+/*
+ * cparser_get_list - Token get function for keyword list.
+ */
+cparser_result_t
+cparser_get_list (const cparser_token_t *token, void *value)
+{
+    char **ptr = (char **)value;
+    cparser_list_node_t *lnode;
+
+    assert(token);
+    if (!token->node) {
+        return CPARSER_NOT_OK;
+    }
+    assert(CPARSER_NODE_LIST == token->node->type);
+
+    /*
+     * We have to handle the case when only the substring of a unique
+     * keyword is given. In this case, we must return the string
+     * in the list node back instead of the one in the token. To 
+     * simplify the logic, we return the string in the list node even
+     * when the token contains the full keyword.
+     */
+    for (lnode = (cparser_list_node_t *)token->node->param;
+         NULL != lnode; lnode = lnode->next) {
+        int clen = strlen(lnode->keyword);
+        if (clen > token->token_len) {
+            clen = token->token_len; /* min. of token and keyword length */
+        }
+        if (!strncmp(token->buf, lnode->keyword, clen)) {
+            *ptr = (char *)lnode->keyword;
+            return CPARSER_OK;
+        }
+    }
+
+    *ptr = NULL;
+    return CPARSER_NOT_OK;
+}

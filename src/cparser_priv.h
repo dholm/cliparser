@@ -1,10 +1,10 @@
 /**
  * \file     cparser_priv.h
  * \brief    Private parser definitions.
- * \version  \verbatim $Id: cparser_priv.h 81 2009-03-20 10:10:22Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_priv.h 156 2011-09-27 09:13:36Z henry $ \endverbatim
  */
 /*
- * Copyright (c) 2008, Henry Kwok
+ * Copyright (c) 2008-2009, 2011, Henry Kwok
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -54,7 +54,35 @@ struct cparser_node_ {
 #define CPARSER_NODE_FLAGS_OPT_START          (1 << 0)
 #define CPARSER_NODE_FLAGS_OPT_END            (1 << 1)
 #define CPARSER_NODE_FLAGS_OPT_PARTIAL        (1 << 2)
+#define CPARSER_NODE_FLAGS_HIDDEN             (1 << 3)
 
 #define VALID_PARSER(p)  (p)
+
+#define NODE_USABLE(p,n) (((p)->is_privileged_mode) ||                  \
+                          (!((n)->flags & CPARSER_NODE_FLAGS_HIDDEN)))
+
+/** Return the current line index */
+#define CURRENT_LINE(p)  ((p)->cur_line)
+
+typedef struct cparser_list_node_ cparser_list_node_t;
+
+/**
+ * \struct   cparser_list_node_t
+ * \brief    A special list node used for LIST token.
+ * \details  Each list node holds one keyword for a LIST token. They
+ *           are singlely linked. The last keyword has a NULL next pointer.
+ */
+struct cparser_list_node_ {
+    cparser_list_node_t   *next;
+    const char            *keyword;
+};
+
+/**
+ * \brief    Print the CLI prompt.
+ * \details  If in privileged mode, prepend a '+'.
+ *
+ * \param    parser Pointer to the parser structure.
+ */
+void cparser_print_prompt(const cparser_t *parser);
 
 #endif /* __CPARSER_PRIV_H__ */

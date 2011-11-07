@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-# $Id: mk_parser.py 139 2009-05-25 09:55:58Z henry $
+# $Id: mk_parser.py 162 2011-10-31 19:13:47Z henry $
 
-# Copyright (c) 2008-2009, Henry Kwok
+# Copyright (c) 2008-2009, 2011, Henry Kwok
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,34 +28,38 @@
 
 import re, sys, glob
 
-print_tree = True
+print_tree = False
 debug = False
 end_node = None
 
-##
-# \brief     Debug printf
-# \details   Print out a object preceeded by a string header if global
-#            'debug' is True.
-#
-# \param     hdr A header string
-# \param     s   Data to be displayed
 def DBG(hdr, s):
+    '''
+    Debug printf
+
+    @details Print out an object preceeded by a string header if global "debug" is True.
+
+    @param   hdr A header string.
+    @param   s   Data to be displayed.
+    '''
     global debug
     if debug:
         sys.stdout.write(hdr)
         print(s)
         
-## A class of parse tree node
 class Node:
+    '''A class of parse tree node.'''
+    ## Supported token types.
     TOKENS = [ 'ROOT', 'END', 'KEYWORD', 'STRING', 'UINT', 'UINT64', 'INT',
                'INT64', 'HEX', 'HEX64', 'FLOAT', 'MACADDR', 'IPV4ADDR',
-               'FILE' ]
+               'FILE', 'LIST' ]
+
+    ## Token types and their corresponding C types.
     TYPES = { 'ROOT'       : None,
               'END'        : None,
               'KEYWORD'    : None,
               'STRING'     : 'char *',
               'UINT'       : 'uint32_t ',
-              'UINT64'     : 'uint65_t ',
+              'UINT64'     : 'uint64_t ',
               'INT'        : 'int32_t ',
               'INT64'      : 'int64_t ',
               'HEX'        : 'uint32_t ',
@@ -63,38 +67,61 @@ class Node:
               'FLOAT'      : 'double ',
               'MACADDR'    : 'cparser_macaddr_t ',
               'IPV4ADDR'   : 'uint32_t ',
-              'FILE'       : 'char *'
+              'FILE'       : 'char *',
+              'LIST'       : 'char *'
               }
     
-    ## Constructor.
-    def __init__(self, node_type, param, desc, flags):
+    def __init__(self, node_type, param, desc, flags, list_kw=None):
         '''
         Constructor.
         '''
+
+        ## Node type.
         self.type = node_type
+        ## Parameter name.
         self.param = param
+        ## Node description
+        self.desc = ''
         if desc:
             self.desc = '    "%s",\n' % desc
         else:
             self.desc = '    NULL,\n'
+        ## Flags
         self.flags = flags
+        ## List of children nodes
         self.children = []
-
+        if list_kw == None:
+            self.list_kw = [] # used only for LIST tokens
+        else:
+            self.list_kw = list_kw
+        
         # Cannot fill these out until we insert the node to the tree
+        ## Reference to parent node
         self.parent = None
+        ## Depth of the node
         self.depth = 0
         self.path = ''
         self.next = None
         return
 
-    ##
-    # \brief     Add a child node to a tree node.
-    #
-    # \param     child A Node object that is added to this node as its child.
     def add_child(self, child):
+        '''
+        Add a child node to a tree node.
+
+        @param   child A Node object that is added to this node as its child.
+
+        @return  The child node added.
+        '''
         for c in self.children:
             if (c.type == child.type) and (c.param == child.param):
                 # The node already exists. Re-use the existing node.
+                # But check if the hidden flag should be cleared. If the new
+                # node does not have CPARSER_NODE_HIDDEN.
+                if 'CPARSER_NODE_HIDDEN' not in child.flags:
+                    try:
+                        c.delete('CPARSER_NODE_HIDDEN')
+                    except:
+                        pass
                 return c
         # Fill out some information that are tree structure dependent.
         # These information are actually embedded in the tree already
@@ -103,7 +130,10 @@ class Node:
         # requirement but decreases the processing time.
         child.parent = self
         child.depth = self.depth + 1
-        if child.is_param() or child.is_keyword():
+        if child.is_list():
+            # For LIST node, param is a dictionary.
+            child.path = self.path + '_' + child.param
+        elif child.is_param() or child.is_keyword():
             child.path = self.path + '_' + child.param.replace('-','_')
         elif 'END' == child.type:
             child.path = self.path + '_eol'
@@ -120,38 +150,69 @@ class Node:
         self.children.append(child)
         return child
 
-    ## Return True if it is a parameter node; False otherwise.
     def is_param(self):
+        '''Is this node a parameter node.
+
+        @return  True if it is a parameter node; False it is a keyword node.
+        '''
         if (('ROOT' == self.type) or ('END' == self.type) or ('KEYWORD' == self.type)):
             return False
         return True
 
-    ## Return True if it is a keyword node; False otherwise.
     def is_keyword(self):
+        '''
+        Is this node a keyword node.
+
+        @return  True if it is a keyword node; False it is a parameter node.
+        '''
         return ('KEYWORD' == self.type)
 
-    ## Return True if it is an optional keyword / parameter; False otherwise.
+    def is_list(self):
+        '''
+        Is this node a LIST node.
+
+        @return  True if it is a LIST node; False otherwise.
+        '''
+        return ('LIST' == self.type)
+
     def is_optional(self):
-        return (0 < (self.flags.count('CPARSER_NODE_FLAGS_OPT_END') +
+        '''
+        Is this node an optional keyword / parameter.
+
+        @return  True if it is optional; False otherwise.
+        '''
+        return (0 < (self.flags.count('CPARSER_NODE_FLAGS_OPT_START') +
+                     self.flags.count('CPARSER_NODE_FLAGS_OPT_END') +
                      self.flags.count('CPARSER_NODE_FLAGS_OPT_PARTIAL')))
-    
-    ## Display a summary of the node.
-    def display(self, fout=sys.stdout):
+
+    def __repr__(self):
+        '''Representation method.
+
+        @return  A string that describes the Node object.
+        '''
+        msg = ''
         if 'ROOT' == self.type:
-            fout.write('<ROOT')
+            msg += '<ROOT'
         elif 'KEYWORD' == self.type:
-            fout.write('<KEYWORD:%s' % self.param)
+            msg += '<KEYWORD:%s' % self.param
         elif 'END' == self.type:
-            fout.write('<END')
+            msg += '<END'
+        elif 'LIST' == self.type:
+            msg += '<LIST:%s:%s>' % (','.join(self.list_kw), self.param)
         else:
-            fout.write('<%s:%s' % (self.type, self.param))
+            msg += '<%s:%s' % (self.type, self.param)
         if len(self.flags) > 0:
             # Create a local copy and strip all CPARSER_NODE_FLAGS_ prefix.
             tmp_list = self.flags[:]
             for n in range(0,len(tmp_list)):
                 tmp_list[n] = tmp_list[n].replace('CPARSER_NODE_FLAGS_','')
-            fout.write(tmp_list.__repr__())
-        fout.write('> ')
+            msg += str(tmp_list)
+        msg += '> '
+        return msg
+
+    ## Display a summary of the node.
+    def display(self, fout=sys.stdout):
+        fout.write(self.__repr__())
 
     ##
     # \brief     Walk the tree
@@ -181,12 +242,31 @@ class Node:
             raise ValueError, 'Unknown walk mode: %s' % mode
         return count
     
-    ## Generate the C structure name.
     def c_struct(self):
+        '''
+        Generate the C structure name.
+
+        @return  Return a string that contains the C structure for the node.
+        '''
+        msg = ''
+        if 'LIST' == self.type:
+            # For LIST token, build its nodes. First, build the variable name.
+            list_kw_len = len(self.list_kw)
+            for n in range(list_kw_len-1, -1, -1):
+                this_kw = self.list_kw[n]
+                if n == (list_kw_len - 1):
+                    next = 'NULL' # last keyword in the list
+                else:
+                    next = '&cparser_list_node%s_%s' % (self.path, self.list_kw[n+1].replace('-', '_'))
+                msg += 'cparser_list_node_t cparser_list_node%s_%s = {\n' % (self.path, this_kw.replace('-', '_'))
+                msg += '    %s,\n' % next
+                msg += '    "%s"\n' % this_kw
+                msg += ' };\n\n'
+            
         if self.parent == None:
-            msg = 'cparser_node_t cparser_root = {\n'
+            msg += 'cparser_node_t cparser_root = {\n'
         else:
-            msg = 'cparser_node_t cparser_node%s = {\n' % self.path
+            msg += 'cparser_node_t cparser_node%s = {\n' % self.path
         # type
         msg += '    CPARSER_NODE_%s,\n' % self.type
         # flags
@@ -198,6 +278,8 @@ class Node:
         if 'ROOT' == self.type:  msg += '    NULL,\n'
         elif 'END' == self.type: msg += '    %s,\n' % self.param
         elif 'KEYWORD' == self.type: msg += '    "%s",\n' % self.param
+        elif 'LIST' == self.type:
+            msg += '    &cparser_list_node%s_%s,\n' % (self.path, self.list_kw[0].replace('-', '_'))
         else: msg += '    "<%s:%s>",\n' % (self.type, self.param)
         # desc
         msg += self.desc
@@ -211,11 +293,16 @@ class Node:
             msg += '    &cparser_node%s\n' % self.children[0].path
         else:
             msg += '    NULL\n'
-        msg += '};\n'
+        msg += '};\n\n'
+
         return msg
 
-    ## Return a list of Node objects that forms a path from root to this node.
     def walk_up_to_root(self):
+        '''
+        Return a list of Node objects that forms a path from root to this node.
+
+        @return  A list of Node objects that forms a path from root (first elemnt) to this node (last element).
+        '''
         assert self.type == 'END'
         p = []
         cur_node = self
@@ -226,8 +313,12 @@ class Node:
                 break
         return p
 
-    ## Generate the action function.
     def action_fn(self):
+        '''
+        Generate the action function prototype.
+
+        @return  The C action function prototype for a command.
+        '''
         # Build a list of parse nodes that forms the path from the root.
         # to this end node
         path = self.walk_up_to_root()
@@ -243,8 +334,12 @@ class Node:
         msg += ');\n'
         return msg
 
-    ## Generate the glue function.
     def glue_fn(self):
+        '''
+        Generate the glue funtion.
+        
+        @return  The C glue function for a command.
+        '''
         # Build a list of parse nodes that forms the path from the root.
         # to this end node
         path = self.walk_up_to_root()
@@ -292,6 +387,85 @@ class Node:
         msg += '}\n\n'
         return msg
 
+class Token:
+    '''Token class. This class represents a token in a CLI command.'''
+    ## Beginning of a parameter token
+    BEGIN = '^\<'
+    ## End of a parameter token
+    END = '\>$'
+    ## Token type
+    TYPE = '([A-Z][A-Z0-9]*)'
+    ## Keyword
+    KW = '[a-zA-Z0-9_-]+'
+    LIST_KW = '([^:]+)'
+    ## Parameter name
+    PARAM = '([a-zA-Z][a-zA-Z0-9_]*)'
+    ## Description of a node
+    DESC= '(:(.+))*'
+    
+    @classmethod
+    def valid_keyword(cls, s):
+        '''Check whether a string is a valid keyword.
+        
+        @return  True if the string is a valid keyword; False otherwise.
+        '''
+        return bool(re.search('^' + cls.KW + '$', s))
+        
+    def __init__(self, s):
+        '''Constructor.
+        
+        @param   s Token string.
+        '''
+
+        # Create the fields of this object
+        ## Node type
+        self.type = ''
+        ## Parameter name
+        self.param = ''
+        ## Description of the node
+        self.desc = ''
+        ## If it is a LIST node, list of keywords.
+        self.list_kw = []
+        
+        # Check if this is a keyword
+        if Token.valid_keyword(s):
+            self.type = 'KEYWORD'
+            self.param = s
+            self.desc = None
+            self.list_kw = []
+            return None
+        
+        # This token must be a parameter of some kind. Parse the type.
+        m = re.search(Token.BEGIN + Token.TYPE + ':(.+)' + Token.END,  s)
+        if not m:
+            raise ValueError, 'Invalid token "%s".' % s
+        if m.group(1) not in Node.TYPES:
+            raise ValueError, 'Unknown token type "%s".' % m.group(1)
+        self.type = m.group(1)
+        
+        # Check if it is a LIST type.
+        if self.type == 'LIST':
+            m = re.search(Token.BEGIN + Token.TYPE + ':' + Token.LIST_KW + ':' + 
+                          Token.PARAM + Token.DESC + Token.END, s)
+            if not m:
+                raise ValueError,  'Malformed LIST token "%s".' % s
+            (self.type,  list_kw,  self.param, dummy, self.desc) = m.groups()
+            # Validate all keywords in the list
+            self.list_kw = list_kw.split(',')
+            for kw in self.list_kw:
+                if not self.valid_keyword(kw):
+                    raise ValueError,  'Invalid LIST keyword "%s".' % kw
+            return None
+        
+        # Handle the rest of the parameters
+        m = re.search(Token.BEGIN + Token.TYPE + ':' + Token.PARAM + Token.DESC + Token.END,  s)
+        if not m:
+            m = re.search(Token.BEGIN + Token.TYPE + ':([^:>]+)' + Token.DESC + Token.END,  s)
+            assert m
+            raise ValueError, 'Invalid parameter name "%s".' % m.group(2)
+        (self.type, self.param, dummy, self.desc) = m.groups()
+        self.list_kw = []
+
 ##
 # \brief     Add one line of CLI to the parse tree.
 #
@@ -304,6 +478,7 @@ def add_cli(root, line, comment):
     global end_node
     nodes = []
     flags = []
+    hidden_flag = []
     num_opt_start = 0
     num_opt_end = 0
 
@@ -319,23 +494,17 @@ def add_cli(root, line, comment):
     if len(tokens) == 0:
         return root # this is a blank line. quit
 
-    # Check each token to make sure that it is valid
-    for t in tokens:
-        m = re.search('\<(.+):(.+)\>', t)
-        if m:
-            # A parameter. Check type and variable name
-            if not Node.TYPES.has_key(m.group(1)):
-                raise ValueError, 'Unknown parameter type "%s".' % m.group(1)
-            if not re.search('^[a-zA-Z]([a-zA-Z0-9_]*)$', m.group(2)):
-                raise ValueError, 'Invalid parameter name "%s".' % m.group(2)
-        elif (t == '{') or (t == '}'):
-            continue
-        else:
-            if not re.search('^[a-zA-Z0-9_-]+$', t):
-                raise ValueError, 'Invalid keyword "%s".' % t
+    # If the '+' marker is with the first token, separate them
+    if tokens[0] == '+':
+        tokens.pop(0)
+        hidden_flag = [ 'CPARSER_NODE_FLAGS_HIDDEN', ]
+    elif tokens[0][0] == '+':
+        tokens[0] = tokens[0][1:]
+        hidden_flag = [ 'CPARSER_NODE_FLAGS_HIDDEN', ]
 
     # Convert tokens to parse tree nodes. '{' and '}' do not produce tree
     # nodes. But they do affect the flags used in some nodes.
+    start_flag = False
     for t in tokens:
         # Parse each token
         # Look for '{'
@@ -343,40 +512,31 @@ def add_cli(root, line, comment):
             # In the last node, its flags field is a reference to
             # 'flags'. So, if we append to it, the last node will get
             # a new flag.
-            flags.append('CPARSER_NODE_FLAGS_OPT_START')
+            start_flag = True
             num_opt_start = num_opt_start + 1
-            continue
+            continue 
         # Look for '}'
         if '}' == t:
             # See comment in '{' case.
-            flags.append('CPARSER_NODE_FLAGS_OPT_END')
+            assert(len(nodes) > 0)
+            nodes[-1].flags.append('CPARSER_NODE_FLAGS_OPT_END')
             num_opt_end = num_opt_end + 1
             if num_opt_end == num_opt_start:
-                flags.remove('CPARSER_NODE_FLAGS_OPT_PARTIAL')
+                nodes[-1].flags.remove('CPARSER_NODE_FLAGS_OPT_PARTIAL')
             continue
 
         if num_opt_start > num_opt_end:
-            flags = ['CPARSER_NODE_FLAGS_OPT_PARTIAL',]
+            flags = hidden_flag + ['CPARSER_NODE_FLAGS_OPT_PARTIAL',]
         else:
-            flags = []
-        # Look for a parameter 
-        m1 = re.search('\<(.+):(.+)\>', t)
-        m2 = re.search('\<(.+):(.+):(.+)\>', t)
-        if m1 or m2:
-            if m2:
-                node_type = m2.group(1)
-                param = m2.group(2)
-                desc = m2.group(3)
-            else:
-                desc = None
-                node_type = m1.group(1)
-                param = m1.group(2)
-            nodes.append(Node(node_type, param, desc, flags))
-            continue
-        # Look for a keyword
-        m = re.search('(.+)', t)
-        if m:
-            nodes.append(Node('KEYWORD', m.group(1), None, flags))
+            flags = hidden_flag[:]
+
+        if start_flag:
+            flags.append('CPARSER_NODE_FLAGS_OPT_START')
+
+        # Get the token type
+        tt = Token(t)
+        nodes.append(Node(tt.type, tt.param, tt.desc, flags[:], tt.list_kw))
+        start_flag = False
 
     # hack alert - Check that if there are optional parameters, the format is ok
     
@@ -400,20 +560,17 @@ def add_cli(root, line, comment):
     for k in range(0, num_opt_start+1):
         DBG('   CLI: ', k)
         num_braces = 0
-        drop = False
         cur_node = root
         if num_opt_start == k:
-            end_node = Node('END', glue_fn, comment, [])
+            end_node = Node('END', glue_fn, comment, hidden_flag[:])
         else:
-            end_node = Node('END', glue_fn, None, ['CPARSER_NODE_FLAGS_OPT_PARTIAL'])
+            end_node = Node('END', glue_fn, None, ['CPARSER_NODE_FLAGS_OPT_PARTIAL',] + hidden_flag)
         for n in nodes:
-            if drop:
-                continue
-            if (n.flags.count('CPARSER_NODE_FLAGS_OPT_START') +
-                n.flags.count('CPARSER_NODE_FLAGS_OPT_END') > 0):
+            if n.flags.count('CPARSER_NODE_FLAGS_OPT_START'):
                 if num_braces == k:
-                    drop = True
-                num_braces = num_braces + 1
+                    num_braces += 1
+                    break
+                num_braces += 1
             if debug:
                 sys.stdout.write('        ')
                 cur_node.display()
@@ -434,22 +591,27 @@ def add_cli(root, line, comment):
 # \brief     Process one .cli file. This includes handling all
 #            preprocessors directive.
 #
-# \param     filename Name of the .cli file.
-# \param     root     Root Node object of the parse tree.
-# \param     mode     'compile', 'preprocess' or 'mkdep'
-# \param     labels   A dictionary containing all defined labels used in
-#                     preprocessing.
-#
-# \return    Return the new root node.
-def process_cli_file(filename, root, mode, labels):
+def process_cli_file(filename, root, mode, labels, last_cli_root=None, last_cli_end=None, submode=False):
+    '''
+    Process one .cli file. This includes handling all preprocessors directive.
+
+    @param     filename Name of the .cli file.
+    @param     root     Root Node object of the parse tree.
+    @param     mode     "compile", "preprocess" or "mkdep"
+    @param     labels   A dictionary containing all defined labels used in
+                        preprocessing.
+    @param     last_cli_root The most recent root node created.
+    @param     last_cli_end  The most recent end node visited.
+    @param     submode  A boolean of whether we are in a submode.
+
+    @return    Return the new root node.
+    '''
+    
     num_disable = 0
     label_stack = []
     deplist = []
     comment = None
     line = ''
-    last_cli_root = None
-    last_cli_end = None
-    submode = False
     try:
         fin = open(filename, 'r')
     except:
@@ -527,11 +689,11 @@ def process_cli_file(filename, root, mode, labels):
                       (filename, line_num, m.group(1)))
                 sys.exit(-1)
             if ('compile' == mode):
-                process_cli_file(m.group(1), root, mode, labels)
+                process_cli_file(m.group(1), root, mode, labels, last_cli_root, last_cli_end, submode)
             elif ('mkdep' == mode):
                 deplist.append(m.group(1))
             elif ('preprocess' == mode):
-                process_cli_file(m.group(1), root, mode, labels)
+                process_cli_file(m.group(1), root, mode, labels, last_cli_root, last_cli_end, submode)
             else:
                 print('%s:%d: unknown mode %s' % (filename, line_num, mode))
             continue
@@ -578,14 +740,19 @@ def process_cli_file(filename, root, mode, labels):
         sys.stdout.write('\n')
     return root
 
-# walker_gen_dbg - Display each node
 def walker_gen_dbg(node, fout):
+    '''
+    Display each node.
+
+    @param       node A Node object.
+    @param       fout An output file object.
+    '''
     fout.write('  ' * node.depth)
     node.display()
     fout.write('\n')
 
-## Process the command-line argument
 def main():
+    '''Program entry point.'''
     filelist = []
     labels = {}
     mode = 'compile'
@@ -653,9 +820,15 @@ def main():
                ' *----------------------------------------------------------------------*/\n' +
                '#ifndef __CPARSER_TREE_H__\n' +
                '#define __CPARSER_TREE_H__\n\n' +
+               '#ifdef __cplusplus\n' +
+               'extern "C" {\n' +
+               '#endif /* __cplusplus */\n\n' +
                'extern cparser_node_t cparser_root;\n\n')
     root.walk(lambda n,f: f.write(n.action_fn()), 'func', fout)
-    fout.write('\n#endif /* __CPARSER_TREE_H__ */\n')
+    fout.write('\n#ifdef __cplusplus\n' +
+               '}\n' +
+               '#endif /* __cplusplus */\n' +
+               '\n#endif /* __CPARSER_TREE_H__ */\n')
     fout.close()
 
     # Print out a summary

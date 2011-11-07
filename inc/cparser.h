@@ -1,10 +1,10 @@
 /**
  * \file     cparser.h
  * \brief    Parser library definitions and function prototypes.
- * \version  \verbatim $Id: cparser.h 138 2009-05-25 09:50:45Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser.h 164 2011-11-07 10:10:08Z henry $ \endverbatim
  */
 /*
- * Copyright (c) 2008, Henry Kwok
+ * Copyright (c) 2008-2009, 2011, Henry Kwok
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -73,7 +73,8 @@
  * The rest of the document are divided into the following sections:
  * - \ref cli - Describe the syntax of CLI files.
  * - \ref action - Describe how to write action functions.
- * - \ref app - Describe how to build an application using CLI parser.
+ * - \ref app - Describe how to build an 
+ *                application using CLI parser.
  * - \ref port - Describe how to port CLI parser to non-UNIX platforms.
  *
  * \section install 3. INSTALLATION
@@ -253,7 +254,7 @@
  * "show roster" consists of two keyword tokens ("show" and "roster"). 
  * Each keyword should be a string consists of alphabet, digits (0-9), 
  * '_' and '-'. Parameters are values entered by users. They have 
- * the form of <[type]:[var]> where [type] is the token type and [var] 
+ * the form of <<i>type</i>:<i>var</i>> where <i>type</i> is the token type and <i>var</i> 
  * is a legal C variable name.
  *
  * CLI parser provides the following parameter token types:
@@ -271,7 +272,18 @@
  * - FILE - A string that represents the path of a file. It
  *   is a specialized version of STRING that provides file 
  *   completion.
- * 
+ * - LIST - A string that takes on a set of keywords. Unlike other parameter 
+ *   tokens, it takes on a unique form: <LIST:<i>kw1</i>,<i>kw2</i>,...:<i>var</i>> where 'kw#' 
+ *   are valid keywords and 'var' is the name of the variable. The 
+ *   intention of LIST keyword is reduce the number of similar commands. 
+ *   For example, suppose one have three commands like:
+ *   1) show interface ip-address,
+ *   2) show interface mtu,
+ *   3) show interface counters.
+ *   One can simplify it to: show interface <LIST:ip-address,mtu,counters:options>.
+ *   Note that there should not be any spaces between commas.
+ *
+ *
  * \subsection cli_extending 5.1 Extending CLI parser
  *
  * (<i>In the future, user can extend CLI parser by adding new token 
@@ -310,51 +322,68 @@
  * c is omitted and d=3? With the nesting constraint, c must be 3
  * and d is omitted.
  * 
+ * \subsection privileged_mode 5.3 Privileged Mode
+ *
+ * There may be commands that one does not want to be available for 
+ * everyone. For example, everyone can issue show commands to debug
+ * and to monitor the system but only the administrator can issue
+ * configuration commands to change the behavior of the system. In
+ * this case, it is useful to have a mode that support restricted 
+ * commands. To mark a command to be a <i>privileged-mode</i> command,
+ * simply precede the command with a "+".
+ *
  * \section cli_example 6. EXAMPLE
  *
  * The following is an example of a CLI for a sample employee 
  * database program.
  *
  * <pre>
- * // This is the CLI syntax file of a test/sample program that handles
- * // an employee roster of a company.
- *
- *
- * // This line tests if comments are handled correctly
- * 
  * // List a summary of employees.
  * show employees
  * 
  * // List detail records of all employees.
  * show employees all
- *
+ * 
  * // List all employees within a certain range of employee ids
- * show employees-by-id <UINT:min> { <UINT:max> }
+ * show employees-by-id { <UINT:min> { <UINT:max> } }
  * 
  * // Add a new employee or enter the record of an existing employee
  * employee <HEX:id>
- *
+ * 
  * \#ifdef TEST_LABEL1
  * // This next line tests if file inclusion is handled correctly.
  * \#include "test_included.cli"
  * \#endif
- *
+ * 
  * \#ifdef TEST_LABEL2
  * // This next line tests if not existing label is handled correctly.
  * \#include "test_not_included.cli"
  * \#endif
- *
+ * 
+ * // Delete an existing employee
  * no employee <HEX:id>
- *
+ * 
  * // Save the current roster to a file
  * save roster <STRING:filename>
- *
+ * 
  * // Load roster file
  * load roster <FILE:filename>
- *
+ * 
  * // List all available commands with a substring 'filter' in it.
  * help { <STRING:filter> }
- *
+ * 
+ * // Show specific field of an employee.
+ * show employee <HEX:id> <LIST:height,weight,date-of-birth,title:field>
+ * 
+ * // Show the bonus factor of an employee.
+ * + show employee <HEX:id> bonus-factor
+ * 
+ * // Enable privileged mode
+ * enable privileged-mode
+ * 
+ * // Disable privileged mode
+ * + disable privileged-mode
+ * 
  * // Leave the database
  * quit
  *
@@ -468,9 +497,21 @@
  * When user enters a command to exit the submode, call 
  * cparser_submode_exit().
  *
- * \section cli_api 6. OTHER USEFUL API
+ * \section privleged_mode 6. PRIVILEGED MODE
  *
- * \subsection cli_load 6.1 Loading A Script
+ * Each parser is initialized to be in non-privileged mode. In order 
+ * to enter privileged mode, one must call cparser_set_privileged_mode()
+ * with enable=1. Usually, privileged mode requires an adminstrator
+ * password to enter. cparser_user_input() is provided to receive 
+ * user input. Line editing is still available during the user input
+ * but characters are not echoed back to the terminal.
+ *
+ * Please see "show employee <HEX:id> bonus-factor" command in 
+ * test_parser for a detail example.
+ *
+ * \section cli_api 7. OTHER USEFUL API
+ *
+ * \subsection cli_load 7.1 Loading A Script
  *
  * cparser_load_cmd() feeds a text file into the parser. It automatically
  * exits submode by examining indentation. Submodes are indented from
@@ -478,7 +519,7 @@
  * it automatically exits the submode. This behavior is identical to
  * Cisco CLI.
  *
- * \subsection cli_help 6.2 Display A Help Summary
+ * \subsection cli_help 7.2 Display A Help Summary
  *
  * cparser_help_cmd() generates a summary of all available commands in
  * the parse tree. The final output is similar to the original .cli
@@ -496,27 +537,42 @@
  * large and user just want to find a small set of commands (possibly
  * with the same keywords or prefixes).
  *
- * \subsection cli_walk 6.3 Walk The Parse Tree
+ * \subsection cli_walk 7.3 Walk The Parse Tree
  *
- * cparser_walk() walks through the entire parse tree and invoke 
+ * cparser_walk() walks through the entire parse tree and invokes 
  * up to two callbacks for each node. One application of this function
  * is cparser_help_cmd(). Another example of this function application is
  * to save configuration. One can walk through the tree and locate all
  * commands that generate states. Each command can then regenerate CLI
  * commands that will recreate the state.
  *
- * \subsection cli_quit 6.4 Quit The Parser
+ * \subsection cli_quit 7.4 Quit The Parser
  *
  * cparser_quit() causes CLI parser to exit from cparser_run().
  *
+ * \subsection cli_user_input 7.5 User Input
  *
+ * At times, it is useful if the CLI parser can accept user input.
+ * cparser_user_input() is provided to accept user input. Calling
+ * this function puts the parser into a user state where an arbitrary
+ * string is accepted. The buffer to hold the string is given in 
+ * this function call. In addition, a callback function must be 
+ * provided. The function returns immediately without accepting
+ * any input. When \<ENTER\> is input, the callback function is
+ * called.
  *
+ * This approach may seem unnecessarily complicated at first sight.
+ * However, it may be needed if the parser input does not come from
+ * the terminal. For example, imagine the parser input is from a
+ * network socket. Then, the process needs to return from
+ * cparser_user_input() call in order to receive the user input.
+ * With the callback function, the way input is fed into the 
+ * cparser is identical during normal parsing or during user input.
+ * When \<ENTER\> is received in user input, the line is processed
+ * just like a normal command.
  *
- *
- *
- *
- *
- *
+ * One can use this function to accept a password for entering
+ * privileged mode. (In that case, <i>echoed</i> should be set to 0.)
  *
  * \page app Building Your Application
  *
@@ -615,6 +671,10 @@
 #ifndef __CPARSER_H__
 #define __CPARSER_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #include "cparser_options.h"
 
 /*
@@ -642,6 +702,8 @@ typedef enum cparser_result_ {
     CPARSER_ERR_INVALID_PARAMS, /**< Invalid input parameters to a call */
     CPARSER_ERR_NOT_EXIST,      /**< Requested object does not exist    */
     CPARSER_ERR_OUT_OF_RES,     /**< Requested resource is exhausted    */
+    CPARSER_ERR_PARSE_ERR,      /**< Parse error                        */
+    CPARSER_ERR_INCOMP_CMD,     /**< Incomplete command                 */
     CPARSER_MAX_RESULTS
 } cparser_result_t;
 
@@ -670,6 +732,18 @@ typedef struct {
 } cparser_context_t;
 
 #define CPARSER_FLAGS_DEBUG        (1 << 0)
+
+/**
+ * Return the number of tokens in the cparser for a particular parsed command.
+ */
+#define CPARSER_NUM_TOKENS(p)      (p->token_tos)
+
+/**
+ * User input callback. This function is called after a user input 
+ * is completed.
+ */
+typedef cparser_result_t (*cparser_input_cb)(cparser_t *conext,
+                                             char *buf, int buf_size);
 
 /**
  * \struct   cparser_cfg_
@@ -707,6 +781,11 @@ typedef struct cparser_token_ {
      * this token.
      */
     cparser_node_t *parent;
+    /**
+     * Pointer to the parse node that matches this token. Note that this
+     * field is only filled out when the token is pushed into the stack.
+     */
+    cparser_node_t *node;
 } cparser_token_t;
 
 /**
@@ -745,6 +824,8 @@ struct cparser_ {
     short             last_good;
     /** Token stack */
     cparser_token_t   tokens[CPARSER_MAX_NUM_TOKENS]; /* parsed tokens */
+    /** Privileged mode (1) or not (0) */
+    int               is_privileged_mode;
 
     /********** Line buffering states **********/
     short             max_line;
@@ -755,6 +836,26 @@ struct cparser_ {
     int               done;   
     /** Context passed back to action function */ 
     cparser_context_t context;
+
+    /********** User input **********/
+    /** Pointer to the buffer provided by user for input */
+    char              *user_buf;
+    /** Size (in bytes) of the buffer provided by user */
+    int               user_buf_size;
+    /** Current number of bytes of the input */
+    int               user_buf_count;
+    /** Whether to echo user input */
+    int               user_do_echo;
+    /** Callback function when the input is complete */
+    cparser_input_cb  user_input_cb;
+
+    /********** Last executed command **********/
+    /** Index to the line buffer that holds the command */
+    int               last_line_idx;
+    /** Result code of the command */
+    cparser_result_t  last_rc;
+    /** End node of the command. NULL if the command is invalid. */
+    cparser_node_t    *last_end_node;
 };
 
 typedef cparser_result_t (*cparser_glue_fn)(cparser_t *parser);
@@ -888,5 +989,107 @@ cparser_result_t cparser_submode_enter(cparser_t *parser, void *cookie,
  *           entered any submode.
  */
 cparser_result_t cparser_submode_exit(cparser_t *parser);
+
+/**
+ * \brief    Set the parser context cookie.
+ *
+ * \param    parser Pointer to the parser structure.
+ * \param    context A parameter that is passed back via cparser_context_t
+ *                   in top-level (non-submode).
+ *
+ * \return   CPARSER_OK if succeeded; CPARSER_ERR_INVALID_PARAMS if the input 
+ *           parameters are invalid.
+ */
+cparser_result_t cparser_set_root_context(cparser_t *parser, void *context);
+
+/**
+ * \brief    Get the parser root context cookie.
+ *
+ * \param    parser Pointer to the parser structure.
+ *
+ * \retval   context Root context cookie.
+ * \return   CPARSER_OK if succeeded; CPARSER_ERR_INVALID_PARAMS if the input 
+ *           parameters are invalid.
+ */
+cparser_result_t cparser_get_root_context(cparser_t *parser, void **context);
+
+/**
+ * \brief    Set the privileged mode.
+ *
+ * \param    parser Pointer to the parser structure.
+ * \param    enable 1 to enable privileged mode; 0 to disable.
+ *
+ * \return   CPARSER_OK if succeeded;
+ *           CPARSER_ERR_INVALID_PARAMS if the input parameters are invalid.
+ */
+cparser_result_t cparser_set_privileged_mode(cparser_t *parser, int enable);
+
+/**
+ * \brief    Check whether we are in privileged mode.
+ *
+ * \param    parser Pointer to the parser structure.
+ *
+ * \return   1 if it is in privileged mode;
+             0 otherwise (or 'parser' is NULL).
+ */
+int cparser_is_in_privileged_mode(const cparser_t *parser);
+
+/**
+ * \brief    Read a raw string from the user via the terminal.
+ *
+ * \param    parser   Pointer to the parser structure.
+ * \param    prompt   Pointer to a prompt string. If NULL, nothing is printed.
+ * \param    echoed   1 to echo the input; 0 otherwise.
+ * \param    buf      Pointer to the buffer for user input.
+ * \param    buf_size Size of the user input buffer.
+ * \param    cb       Callback function that is called when input is complete.
+ *
+ * \return   CPARSER_OK if succeeded;
+ *           CPARSER_ERR_INVALID_PARAMS if the input parameters are invalid.
+ */
+cparser_result_t cparser_user_input(cparser_t *parser, const char *prompt,
+                                    int echoed, char *buf, int buf_size,
+                                    cparser_input_cb cb);
+
+/**
+ * Abort an outstanding user input. This is used when a terminal cannot 
+ * unechoed input.
+ * 
+ * \param    parser   Pointer to the parser structure.
+ *
+ * \return   CPARSER_OK if succeeded;
+ *           CPARSER_ERR_NOT_EXIST if the parser is not expecting user input;
+ *           CPARSER_ERR_INVALID_PARAMS if the input parameter is invalid.
+ */
+cparser_result_t cparser_abort_user_input(cparser_t *parser);
+
+/**
+ * \brief    Return whether the parser is expected in a user input or 
+ *           a command.
+ *
+ * \param    parser   Pointer to the parser structure.
+ *
+ * \retval   do_echo  1 if the input is echoed; 0 otherwise.
+ * \return   1 if it is expecting user input;
+ *           0 if it is expecting commands.
+ */
+int cparser_is_user_input(cparser_t *parser, int *do_echo);
+
+/**
+ * \brief    Get information about the last executed command.
+ *
+ * \param    parser   Pointer to the parser structure.
+ *
+ * \retval   cmd      Pointer to the command string.
+ * \retval   rc       The result code.
+ * \retval   is_priv  1 if the command is privileged; 0 otherwise. Only 
+ *                    meaningful if the command is valid.
+ */
+cparser_result_t cparser_last_command(cparser_t *parser, char **cmd,
+                                      cparser_result_t *rc, int *is_priv);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* __CPARSER_H__ */

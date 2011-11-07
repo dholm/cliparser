@@ -1,10 +1,10 @@
 /**
  * \file     cparser_line.c
  * \brief    Parser line buffer.
- * \version  \verbatim $Id: cparser_line.c 120 2009-03-29 00:02:21Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_line.c 153 2011-09-25 06:02:54Z henry $ \endverbatim
  */
 /*
- * Copyright (c) 2008, Henry Kwok
+ * Copyright (c) 2008-2009, Henry Kwok
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -137,7 +137,7 @@ cparser_line_print (const cparser_t *parser, int print_prompt, int new_line)
         parser->cfg.printc(parser, '\n');
     }
     if (print_prompt) {
-        parser->cfg.prints(parser, parser->prompt[parser->root_level]);
+        cparser_print_prompt(parser);
     }
     line = &parser->lines[parser->cur_line];
     parser->cfg.prints(parser, line->buf);

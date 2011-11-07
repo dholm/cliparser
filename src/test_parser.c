@@ -3,10 +3,10 @@
  * \brief    Test program for parser library. 
  * \details  This is a test program with a simple CLI that serves as a demo 
  *           as well.
- * \version  \verbatim $Id: test_parser.c 127 2009-03-29 03:01:37Z henry $ \endverbatim
+ * \version  \verbatim $Id: test_parser.c 159 2011-10-29 09:29:58Z henry $ \endverbatim
  */
 /*
- * Copyright (c) 2008, Henry Kwok
+ * Copyright (c) 2008-2009, 2011, Henry Kwok
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -115,9 +115,9 @@ main (int argc, char *argv[])
     cparser_t parser;
     char *config_file = NULL;
     int ch, debug = 0, n;
-    cparser_printc_fn printc_fn;
-    cparser_prints_fn prints_fn;
     cparser_result_t rc;
+
+    memset(&parser, 0, sizeof(parser));
 
     while (-1 != (ch = getopt(argc, argv, "pic:d"))) {
         switch (ch) {
@@ -188,7 +188,7 @@ main (int argc, char *argv[])
 
         /* Test command completion */
         BZERO_OUTPUT;
-        feed_parser(&parser, "sh\temp\t a\t\n");
+        feed_parser(&parser, "sh\temp\ts a\t\n");
         update_result(output, "No employee in the roster.\n",
                       "command completion");
 
@@ -313,9 +313,6 @@ main (int argc, char *argv[])
         }
 
         /* Test context-sensitive help */
-        /* Save the original I/O functions and put in our own to trap output */
-        prints_fn = parser.cfg.prints;
-        printc_fn = parser.cfg.printc;
         parser.cfg.printc = test_printc;
         parser.cfg.prints = test_prints;
 
@@ -336,19 +333,19 @@ main (int argc, char *argv[])
         feed_parser(&parser, "\n"); /* flush out the last incomplete command */
         BZERO_OUTPUT;
         feed_parser(&parser, "s\n");
-        update_result(output, "s\n        ^Incomplete command\n\nTEST>> ",
+        update_result(output, "s\n        ^Incomplete command\nTEST>> ",
                       "Incomplete command #1");
 
         BZERO_OUTPUT;
         feed_parser(&parser, "show \n");
         update_result(output, 
-                      "show \n           ^Incomplete command\n\nTEST>> ",
+                      "show \n            ^Incomplete command\nTEST>> ",
                       "Incomplete command #2");
 
         BZERO_OUTPUT;
         feed_parser(&parser, "show em\n");
         update_result(output, 
-                      "show em\n              ^Incomplete command\n\nTEST>> ",
+                      "show em\n              ^Incomplete command\nTEST>> ",
                       "Incomplete command #3");
 
         /* Test invalid commands */
@@ -369,22 +366,24 @@ main (int argc, char *argv[])
          */
         BZERO_OUTPUT;
         feed_parser(&parser, "help\n");
-        update_result(output, "help\n"
+        update_result(output, "help \n"
                       "List a summary of employees.\r\n  show employees \r\n\n"
                       "List detail records of all employees.\r\n  show employees all \r\n\n"
-                      "List all employees within a certain range of employee ids\r\n  show employees-by-id <UINT:min> { <UINT:max> } \r\n\n"
+                      "List all employees within a certain range of employee ids\r\n  show employees-by-id { <UINT:min> { <UINT:max> } } \r\n\n"
+                      "Show specific field of an employee.\r\n  show employee <HEX:id> [ height | weight | date-of-birth | title ] \r\n\n"
                       "Add a new employee or enter the record of an existing employee\r\n  employee <HEX:id> \r\n\n"
                       "Delete an existing employee\r\n  no employee <HEX:id> \r\n\n"
                       "Save the current roster to a file\r\n  save roster <STRING:filename> \r\n\n"
                       "Load roster file\r\n  load roster <FILE:filename> \r\n\n"
                       "List all available commands with a substring 'filter' in it.\r\n  help { <STRING:filter> } \r\n\n"
+                      "Enable privileged mode\r\n  enable privileged-mode \r\n\n"
                       "Leave the database\r\n  quit \r\n\n"
                       "TEST>> ",
                       "help summary #1");
 
         BZERO_OUTPUT;
         feed_parser(&parser, "help roster\n");
-        update_result(output, "help roster\n"
+        update_result(output, "help roster \n"
                       "Save the current roster to a file\r\n  save roster <STRING:filename> \r\n\n"
                       "Load roster file\r\n  load roster <FILE:filename> \r\n\n"
                       "TEST>> ",

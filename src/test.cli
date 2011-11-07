@@ -11,7 +11,7 @@ show employees
 show employees all
 
 // List all employees within a certain range of employee ids
-show employees-by-id <UINT:min> { <UINT:max> }
+show employees-by-id { <UINT:min> { <UINT:max> } }
 
 // Add a new employee or enter the record of an existing employee
 employee <HEX:id>
@@ -37,6 +37,18 @@ load roster <FILE:filename>
 
 // List all available commands with a substring 'filter' in it.
 help { <STRING:filter> }
+
+// Show specific field of an employee.
+show employee <HEX:id> <LIST:height,weight,date-of-birth,title:field>
+
+// Show the bonus factor of an employee.
++ show employee <HEX:id> bonus-factor
+
+// Enable privileged mode
+enable privileged-mode
+
+// Disable privileged mode
++ disable privileged-mode
 
 // Leave the database
 quit

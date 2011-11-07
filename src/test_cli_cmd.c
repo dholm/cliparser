@@ -6,7 +6,7 @@
  * \version  \verbatim $Id: test_parser.c 33 2009-01-22 06:45:33Z henry $ \endverbatim
  */
 /*
- * Copyright (c) 2008, Henry Kwok
+ * Copyright (c) 2008-2009, Henry Kwok
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -166,6 +166,7 @@ test_employee_print (employee_t *emp)
 {
     PRINTF("%s\n", emp->name);
     PRINTF("   ID: 0x%08X\n", emp->id);
+    PRINTF("   Title: %s\n", emp->title);
     PRINTF("   Height: %3d\"   Weight: %3d lbs.\n",
            (int)emp->height, (int)emp->weight);
 #if 0
@@ -251,9 +252,9 @@ cparser_cmd_show_employees_by_id_min_max (cparser_context_t *context,
     int n, num_shown = 0;
     uint32_t min_val, max_val;
 
-    assert(context && min); /* don't assert on 'max' because it is optional */
+    assert(context); /* don't assert on 'max' because it is optional */
 
-    min_val = *min;
+    min_val = (min ? *min : 0x0);
     max_val = (max ? *max : 0xffffffff);
 
     for (n = 0; n < MAX_EMPLOYEES; n++) {
@@ -418,8 +419,8 @@ cparser_cmd_emp_title_title (cparser_context_t *context, char **title)
     assert(context && title);
     emp = (employee_t *)context->cookie[1];
     assert(emp);
-    strncpy(emp->name, *title, MAX_NAME);
-    emp->name[MAX_NAME-1] = '\0';
+    strncpy(emp->title, *title, MAX_TITLE);
+    emp->title[MAX_TITLE-1] = '\0';
     return CPARSER_OK;
 }
 
@@ -582,3 +583,100 @@ cparser_cmd_quit (cparser_context_t *context)
     assert(context);
     return cparser_quit(context->parser);
 }
+
+cparser_result_t
+cparser_cmd_show_employee_id_field (cparser_context_t *context, uint32_t *id, char **field)
+{
+    employee_t *emp;
+
+    assert(context && id && field && (*field));
+
+    /* Find the employee record */
+    emp = test_employee_search(roster, *id);
+    if (!emp) {
+        PRINTF("Employee 0x%0X doees not exist.\n", *id);
+        return CPARSER_NOT_OK;
+    }
+
+    /* Print the corresponding field */
+    if (!strcmp(*field, "height")) {
+        PRINTF("Height: %u in.\n", emp->height);
+    }
+    if (!strcmp(*field, "weight")) {
+        PRINTF("Weight: %u lbs.\n", emp->weight);
+    }
+    if (!strcmp(*field, "date-of-birth")) {
+        PRINTF("Date of birth: %2u/%2u/%4u\n", emp->dob.month,
+               emp->dob.day, emp->dob.year);
+    }
+    if (!strcmp(*field, "title")) {
+        PRINTF("Title: %s\n", emp->title);
+    }
+
+    return CPARSER_OK;
+}
+
+cparser_result_t
+cparser_cmd_show_employee_id_bonus_factor (cparser_context_t *context, uint32_t *id)
+{
+    employee_t *emp;
+
+    assert(context && id);
+
+    /* Find the employee record */
+    emp = test_employee_search(roster, *id);
+    if (!emp) {
+        PRINTF("Employee 0x%0X doees not exist.\n", *id);
+        return CPARSER_NOT_OK;
+    }
+
+    PRINTF("Bonus factor: %f\n", emp->bonus_factor);
+
+    return CPARSER_OK;
+}
+
+static cparser_result_t
+cparser_cmd_enter_privileged_mode (cparser_t *parser, char *buf, int buf_size)
+{
+    if (strncmp(buf, "HELLO", buf_size)) {
+        PRINTF("\nPassword incorrect. Should enter 'HELLO'.\n");
+    } else {
+        PRINTF("\nEnter privileged mode.\n");
+        cparser_set_privileged_mode(parser, 1);
+    }
+    return CPARSER_OK;
+}
+
+cparser_result_t
+cparser_cmd_enable_privileged_mode (cparser_context_t *context)
+{
+    char passwd[100];
+    int rc;
+
+    assert(context && context->parser);
+
+    if (cparser_is_in_privileged_mode(context->parser)) {
+        PRINTF("Already in privileged mode.\n");
+        return CPARSER_NOT_OK;
+    }
+
+    /* Request privileged mode password */
+    rc = cparser_user_input(context->parser, "Enter password (Enter: 'HELLO'): ", 0,
+                            passwd, sizeof(passwd), cparser_cmd_enter_privileged_mode);
+    assert(CPARSER_OK == rc);
+    return CPARSER_OK;
+}
+
+cparser_result_t
+cparser_cmd_disable_privileged_mode (cparser_context_t *context)
+{
+    assert(context && context->parser);
+    if (!cparser_is_in_privileged_mode(context->parser)) {
+        PRINTF("Not in privileged mode.\n");
+        return CPARSER_NOT_OK;
+    }
+
+    cparser_set_privileged_mode(context->parser, 0);
+    return CPARSER_OK;
+}
+

@@ -1,10 +1,10 @@
 /**
  * \file     cparser_fsm.h
  * \brief    Parser state machine definitions and prototype.
- * \version  \verbatim $Id: cparser_fsm.h 72 2009-03-19 07:30:35Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_fsm.h 148 2011-09-23 13:01:25Z henry $ \endverbatim
  */
 /*
- * Copyright (c) 2008, Henry Kwok
+ * Copyright (c) 2008-2009, Henry Kwok
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -59,6 +59,7 @@ cparser_result_t cparser_fsm_input(cparser_t *parser, char ch);
 /**
  * Walk through all children of a node. Return a match node if one is found.
  *
+ * \param    parser    Pointer to the parser structure.
  * \param    token     Pointer to the beginning of the token.
  * \param    token_len Length of the token.
  * \param    parent    Pointer to the parent node.
@@ -69,7 +70,8 @@ cparser_result_t cparser_fsm_input(cparser_t *parser, char ch);
  * \retval   is_complete 1 if the token completely matches 
  * \return   Number of matches.
  */
-int cparser_match(const char *token, const int token_len, cparser_node_t *parent,
-                  cparser_node_t **match, int *is_complete);
+int cparser_match(const cparser_t *parser, const char *token, const int token_len,
+                  cparser_node_t *parent, cparser_node_t **match,
+                  int *is_complete);
 
 #endif /* __CPARSER_FSM_H__ */

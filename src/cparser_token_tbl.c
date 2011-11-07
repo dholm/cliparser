@@ -1,10 +1,10 @@
 /**
  * \file     cparser_token_tbl.c
  * \brief    Parser token processing tables.
- * \version  \verbatim $Id: cparser_token_tbl.c 136 2009-05-25 05:38:25Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_token_tbl.c 152 2011-09-24 09:16:00Z henry $ \endverbatim
  */
 /*
- * Copyright (c) 2008, Henry Kwok
+ * Copyright (c) 2008-2009, 2011, Henry Kwok
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -57,8 +57,7 @@ cparser_match_fn cparser_match_fn_tbl[CPARSER_MAX_NODE_TYPES] = {
     cparser_match_macaddr,
     cparser_match_ipv4addr,
     cparser_match_file,
-    NULL,
-    NULL
+    cparser_match_list
 };
 
 /**
@@ -70,7 +69,7 @@ cparser_match_fn cparser_match_fn_tbl[CPARSER_MAX_NODE_TYPES] = {
 cparser_complete_fn cparser_complete_fn_tbl[CPARSER_MAX_NODE_TYPES] = {
     NULL,
     NULL,
-    NULL,
+    cparser_complete_keyword,
     NULL,
     NULL,
     NULL,
@@ -82,8 +81,7 @@ cparser_complete_fn cparser_complete_fn_tbl[CPARSER_MAX_NODE_TYPES] = {
     NULL,
     NULL,
     cparser_complete_file,
-    NULL,
-    NULL,
+    cparser_complete_list
 };
 
 cparser_get_fn cparser_get_fn_tbl[CPARSER_MAX_NODE_TYPES] = {
@@ -101,6 +99,5 @@ cparser_get_fn cparser_get_fn_tbl[CPARSER_MAX_NODE_TYPES] = {
     cparser_get_macaddr,
     cparser_get_ipv4addr,
     cparser_get_file,
-    NULL,
-    NULL
+    cparser_get_list
 };

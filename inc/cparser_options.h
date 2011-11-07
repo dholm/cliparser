@@ -1,10 +1,10 @@
 /**
  * \file     cparser_options.h
  * \brief    Parser limits for various objects.
- * \version  \verbatim $Id: cparser_options.h 117 2009-03-28 21:30:12Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_options.h 142 2011-09-01 05:31:27Z henry $ \endverbatim
  */
 /*
- * Copyright (c) 2008, Henry Kwok
+ * Copyright (c) 2008-2009, 2011, Henry Kwok
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -63,5 +63,10 @@
  * Maximum number of character per line.
  */
 #define CPARSER_MAX_LINE_SIZE      (383)
+
+/**
+ * If defined, support some of Emacs key binding.
+ */
+#define CPARSER_EMACS_BINDING
 
 #endif /* __CPARSER_OPTIONS_H__ */

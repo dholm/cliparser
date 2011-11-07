@@ -1,10 +1,10 @@
 /**
  * \file     cparser_io_unix.c
  * \brief    Unix-specific parser I/O routines
- * \version  \verbatim $Id: cparser_io_unix.c 120 2009-03-29 00:02:21Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_io_unix.c 159 2011-10-29 09:29:58Z henry $ \endverbatim
  */
 /*
- * Copyright (c) 2008, Henry Kwok
+ * Copyright (c) 2008-2009, 2011, Henry Kwok
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,11 @@
 #include "cparser.h"
 #include "cparser_io.h"
 #include "cparser_priv.h"
+
+#define CTRL_A (1)
+#define CTRL_E (5)
+#define CTRL_N (14)
+#define CTRL_P (16)
 
 /**
  * \brief    Enable/disable canonical mode.
@@ -95,6 +100,16 @@ cparser_unix_getch (cparser_t *parser, int *ch, cparser_char_t *type)
                     break;
             }
         }
+#ifdef CPARSER_EMACS_BINDING
+    } else if (CTRL_P == (*ch)) {
+        *type = CPARSER_CHAR_UP_ARROW;
+    } else if (CTRL_N == (*ch)) {
+        *type = CPARSER_CHAR_DOWN_ARROW;
+    } else if (CTRL_A == (*ch)) {
+        *type = CPARSER_CHAR_FIRST;
+    } else if (CTRL_E == (*ch)) {
+        *type = CPARSER_CHAR_LAST;
+#endif /* EMACS_BINDING */
     } else if (isalnum(*ch) || ('\n' == *ch) ||
                ispunct(*ch) || (' ' == *ch) ||
                (*ch == parser->cfg.ch_erase) ||
@@ -111,14 +126,18 @@ cparser_unix_printc (const cparser_t *parser, const char ch)
     ssize_t wsize;
     assert(parser);
     wsize = write(parser->cfg.fd, &ch, 1);
+    assert((0 <= wsize) || (-1 == parser->cfg.fd));
 }
 
 static void
 cparser_unix_prints (const cparser_t *parser, const char *s)
 {
     ssize_t wsize;
-    assert(parser && s);
-    wsize = write(parser->cfg.fd, s, strlen(s));
+    assert(parser);
+    if (s) {
+        wsize = write(parser->cfg.fd, s, strlen(s));
+        assert((0 <= wsize) || (-1 == parser->cfg.fd));
+    }
 }
 
 static void 

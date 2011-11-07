@@ -1,14 +1,14 @@
 /**
  * \file     cparser_io.h
  * \brief    Platform-dependent parser I/O routines header and definition.
- * \version  \verbatim $Id: cparser_io.h 120 2009-03-29 00:02:21Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_io.h 142 2011-09-01 05:31:27Z henry $ \endverbatim
  *
  * \details  CLI parser library requires some platform-dependent API to
  *           provide access to the terminal. These API can vary greatly
  *           among different OSs.
  */
 /*
- * Copyright (c) 2008, Henry Kwok
+ * Copyright (c) 2008-2009, 2011, Henry Kwok
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,6 +47,8 @@ typedef enum {
     CPARSER_CHAR_DOWN_ARROW,  /**< Down arrow (recall next command) */
     CPARSER_CHAR_LEFT_ARROW,  /**< Left arrow (prev. character in the command) */
     CPARSER_CHAR_RIGHT_ARROW, /**< Right arrow (next character in the command) */
+    CPARSER_CHAR_FIRST,       /**< Go to the first character in the command */
+    CPARSER_CHAR_LAST,        /**< Go to the first character in the command */
     CPARSER_MAX_CHAR
 } cparser_char_t;
 

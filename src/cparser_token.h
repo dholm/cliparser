@@ -1,10 +1,10 @@
 /**
  * \file     cparser_token.h
  * \brief    Parser token parsing and completion routine prototypes.
- * \version  \verbatim $Id: cparser_token.h 136 2009-05-25 05:38:25Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_token.h 152 2011-09-24 09:16:00Z henry $ \endverbatim
  */
 /*
- * Copyright (c) 2008, Henry Kwok
+ * Copyright (c) 2008-2009, Henry Kwok
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,6 +53,7 @@ typedef enum {
     CPARSER_NODE_MACADDR,
     CPARSER_NODE_IPV4ADDR,
     CPARSER_NODE_FILE,
+    CPARSER_NODE_LIST,
     CPARSER_MAX_NODES
 } cparser_node_type_t;
 
@@ -88,10 +89,14 @@ typedef cparser_result_t (*cparser_match_fn)(const char *token,
  * \details  This function pointer is the prototype of all
  *           CLI Parser match functions.
  *
+ * \param    parser    Pointer to the parser.
+ * \param    node      Pointer to the current matching parse node.
  * \param    token     Pointer to the token.
  * \param    token_len Number of valid characters in the token.
  */
-typedef cparser_result_t (*cparser_complete_fn)(const char *token,
+typedef cparser_result_t (*cparser_complete_fn)(cparser_t *parser,
+                                                const cparser_node_t *node,
+                                                const char *token,
                                                 const int token_len);
 
 /**
@@ -140,9 +145,16 @@ cparser_result_t cparser_match_ipv4addr(const char *token, const int token_len,
                                         cparser_node_t *node, int *is_complete);
 cparser_result_t cparser_match_file(const char *token, const int token_len,
                                     cparser_node_t *node, int *is_complete);
+cparser_result_t cparser_match_list(const char *token, const int token_len,
+                                    cparser_node_t *node, int *is_complete);
 
 /********** Token complete functions **********/
-cparser_result_t cparser_complete_file(const char *token, const int token_len);
+cparser_result_t cparser_complete_keyword(cparser_t *parser, const cparser_node_t *node,
+                                          const char *token, const int token_len);
+cparser_result_t cparser_complete_file(cparser_t *parser, const cparser_node_t *node,
+                                       const char *token, const int token_len);
+cparser_result_t cparser_complete_list(cparser_t *parser, const cparser_node_t *node,
+                                       const char *token, const int token_len);
 
 /********** Token get functions **********/
 cparser_result_t cparser_get_string(const cparser_token_t *token, void *value);
@@ -156,5 +168,6 @@ cparser_result_t cparser_get_float(const cparser_token_t *token, void *value);
 cparser_result_t cparser_get_macaddr(const cparser_token_t *token, void *value);
 cparser_result_t cparser_get_ipv4addr(const cparser_token_t *token, void *value);
 cparser_result_t cparser_get_file(const cparser_token_t *token, void *value);
+cparser_result_t cparser_get_list(const cparser_token_t *token, void *value);
 
 #endif /* __CPARSER_MATCH_H__ */

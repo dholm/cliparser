@@ -1,10 +1,10 @@
 /**
  * \file     cparser_fsm.c
  * \brief    Parser state machine implementation.
- * \version  \verbatim $Id: cparser_fsm.c 120 2009-03-29 00:02:21Z henry $ \endverbatim
+ * \version  \verbatim $Id: cparser_fsm.c 147 2011-09-23 12:55:33Z henry $ \endverbatim
  */
 /*
- * Copyright (c) 2008, Henry Kwok
+ * Copyright (c) 2008-2009, Henry Kwok
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
     (t)->buf[(t)->token_len] = '\0';
 
 int
-cparser_match (const char *token, const int token_len, cparser_node_t *parent,
-               cparser_node_t **match, int *is_complete)
+cparser_match (const cparser_t *parser, const char *token, const int token_len,
+               cparser_node_t *parent, cparser_node_t **match, int *is_complete)
 {
     int num_matches = 0, local_is_complete;
     cparser_node_t *child;
@@ -54,6 +54,9 @@ cparser_match (const char *token, const int token_len, cparser_node_t *parent,
     *match = NULL;
     *is_complete = 0;
     for (child = parent->children; NULL != child; child = child->sibling) {
+        if (!NODE_USABLE(parser, child)) {
+            continue;
+        }
 	local_is_complete = 0;
         rc = cparser_match_fn_tbl[child->type](token, token_len, child, 
                                                &local_is_complete);
@@ -111,6 +114,7 @@ cparser_token_stack_reset (cparser_t *parser)
         token->begin_ptr = -1;
         token->token_len = 0;
         token->parent    = NULL;
+        token->node      = NULL;
         memset(token->buf, 0, sizeof(token->buf));
     }
 }
@@ -150,6 +154,7 @@ cparser_ws_erase (cparser_t *parser, const char ch, int *ch_processed)
                 token->begin_ptr = -1;
                 token->token_len = 0;
                 token->parent    = NULL;
+                token->node      = NULL;
                 token->buf[0]    = '\0';
                 parser->token_tos--;
                 return CPARSER_STATE_TOKEN;
@@ -206,7 +211,7 @@ cparser_ws_char (cparser_t *parser, const char ch, int *ch_processed)
     assert(parser && ch_processed);
     *ch_processed = 1;
 
-    if (!cparser_match(&ch, 1, parser->cur_node, &match, &is_complete)) {
+    if (!cparser_match(parser, &ch, 1, parser->cur_node, &match, &is_complete)) {
 	return CPARSER_STATE_ERROR; /* no token match */
     }
 
@@ -273,11 +278,12 @@ cparser_tok_space (cparser_t *parser, const char ch, int *ch_processed)
     assert(parser && (' ' == ch) && ch_processed);
     *ch_processed = 1;
     token = CUR_TOKEN(parser);
-    if ((1 <= cparser_match(token->buf, token->token_len, 
+    if ((1 <= cparser_match(parser, token->buf, token->token_len, 
                             parser->cur_node, &match, &is_complete)) && 
 	(is_complete)) {
         /* Save the parent node for this token and "close" the token */
         token->parent = parser->cur_node;
+        token->node = match;
 	token->buf[token->token_len] = '\0';
 
         /* Push it into the stack */
@@ -324,7 +330,7 @@ cparser_tok_char (cparser_t *parser, const char ch, int *ch_processed)
     } else {
         return CPARSER_STATE_ERROR;
     }
-    if (!cparser_match(token->buf, token->token_len, parser->cur_node, 
+    if (!cparser_match(parser, token->buf, token->token_len, parser->cur_node, 
                        &match, &is_complete)) {
         DELETE_TOK_STK(token);
         return CPARSER_STATE_ERROR;
