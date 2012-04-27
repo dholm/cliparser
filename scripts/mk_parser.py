@@ -31,6 +31,7 @@ import re, sys, glob
 print_tree = False
 debug = False
 end_node = None
+cli_root_stack = []
 
 def DBG(hdr, s):
     '''
@@ -591,7 +592,7 @@ def add_cli(root, line, comment):
 # \brief     Process one .cli file. This includes handling all
 #            preprocessors directive.
 #
-def process_cli_file(filename, root, mode, labels, last_cli_root=None, last_cli_end=None, submode=False):
+def process_cli_file(filename, root, mode, labels, last_cli_root=None, last_cli_end=None):
     '''
     Process one .cli file. This includes handling all preprocessors directive.
 
@@ -606,7 +607,10 @@ def process_cli_file(filename, root, mode, labels, last_cli_root=None, last_cli_
 
     @return    Return the new root node.
     '''
-    
+    global end_node
+
+    global cli_root_stack
+
     num_disable = 0
     label_stack = []
     deplist = []
@@ -617,7 +621,10 @@ def process_cli_file(filename, root, mode, labels, last_cli_root=None, last_cli_
     except:
         print 'Fail to open %s.' % filename
         sys.exit(-1)
-        
+
+    if last_cli_root is None:
+        last_cli_root = root
+
     line_num = 0
     for line in fin:
         line_num = line_num + 1
@@ -689,45 +696,37 @@ def process_cli_file(filename, root, mode, labels, last_cli_root=None, last_cli_
                       (filename, line_num, m.group(1)))
                 sys.exit(-1)
             if ('compile' == mode):
-                process_cli_file(m.group(1), root, mode, labels, last_cli_root, last_cli_end, submode)
+                process_cli_file(m.group(1), root, mode, labels, last_cli_root, last_cli_end)
             elif ('mkdep' == mode):
                 deplist.append(m.group(1))
             elif ('preprocess' == mode):
-                process_cli_file(m.group(1), root, mode, labels, last_cli_root, last_cli_end, submode)
+                process_cli_file(m.group(1), root, mode, labels, last_cli_root, last_cli_end)
             else:
                 print('%s:%d: unknown mode %s' % (filename, line_num, mode))
             continue
         # #submode
         m = re.search('^#submode "(.+)"', line)
         if m:
-            if submode:
-                print('%s:%d: nested submode is invalid.' % (filename, line_num))
-            else:
-                submode = True
-                last_cli_root = Node('ROOT', '_' + m.group(1),
-                                     'Root of submode %s' % m.group(1), [])
-                last_cli_end.add_child(last_cli_root)
+            cli_root_stack.append((last_cli_root, last_cli_end))
+            last_cli_root = Node('ROOT', '_' + m.group(1),
+                                    'Root of submode %s' % m.group(1), [])
+            last_cli_end.add_child(last_cli_root)
             continue
         # #endsubmode
         m = re.search('^#endsubmode', line)
         if m:
-            if not submode:
+            if len(cli_root_stack) == 0:
                 print('%s:%d: #endsubmode without a #submode.' %
                       (filename, line_num))
                 sys.exit(-1)
             else:
-                submode = False
-                last_cli_root = None
-                last_cli_end = None
+                (last_cli_root, last_cli_end) = cli_root_stack.pop()
             continue
         # What survive must be either an empty line or a command
         if ('compile' == mode):
             try:
-                if not submode:
-                    root = add_cli(root, line, comment)
-                    last_cli_end = end_node
-                else:
-                    last_cli_root = add_cli(last_cli_root, line, comment)
+                add_cli(last_cli_root, line, comment)
+                last_cli_end = end_node
             except ValueError, msg:
                 print('%s:%d: %s' % (filename, line_num, msg))
                 sys.exit(-1)
