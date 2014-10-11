@@ -48,7 +48,7 @@
 /**
  * \brief    A stub for the real cparser_input().
  */
-cparser_result_t 
+cparser_result_t
 cparser_input (cparser_t *parser, char ch, cparser_char_t ch_type)
 {
     return CPARSER_OK;
@@ -64,7 +64,7 @@ cparser_input (cparser_t *parser, char ch, cparser_char_t ch_type)
  */
 int main (int argc, char *argv[])
 {
-    /* 
+    /*
      * A set of list node for a LIST token. The keyword list is:
      *
      * all -> configuration -> states -> stats -> memory
@@ -136,7 +136,7 @@ int main (int argc, char *argv[])
         { "HEX64_02", "0x0123456", CPARSER_NODE_HEX, "a", CPARSER_OK, 1 },
         { "HEX64_03", "1x1234", CPARSER_NODE_HEX, "a", CPARSER_NOT_OK, 0 },
         { "HEX64_04", "0x", CPARSER_NODE_HEX, "a", CPARSER_OK, 0 },
-        { "HEX64_05", "0xyz", CPARSER_NODE_HEX, "a", CPARSER_NOT_OK, 0 },        
+        { "HEX64_05", "0xyz", CPARSER_NODE_HEX, "a", CPARSER_NOT_OK, 0 },
         /* Float */
         /* MAC address */
         { "MAC01", "0", CPARSER_NODE_MACADDR, "macaddr", CPARSER_OK, 0 },
@@ -193,12 +193,12 @@ int main (int argc, char *argv[])
         node.param = match_testcases[n].param;
         is_complete = 0xff;
         assert(cparser_match_fn_tbl[node.type]);
-        result = cparser_match_fn_tbl[node.type](match_testcases[n].str, 
-                                                 strlen(match_testcases[n].str), 
+        result = cparser_match_fn_tbl[node.type](match_testcases[n].str,
+                                                 strlen(match_testcases[n].str),
                                                  &node, &is_complete);
         num_tests++;
 
-        if ((result == match_testcases[n].result) && 
+        if ((result == match_testcases[n].result) &&
             (is_complete == match_testcases[n].is_complete)) {
             printf("PASS: %s: ", match_testcases[n].name);
             num_passes++;
@@ -206,19 +206,19 @@ int main (int argc, char *argv[])
             printf("FAIL: %s: ", match_testcases[n].name);
         }
         printf("'%s' -> (%d, %s) -> (%s, %s)\n", match_testcases[n].str,
-               match_testcases[n].type, 
-               (CPARSER_NODE_LIST != match_testcases[n].type ? 
+               match_testcases[n].type,
+               (CPARSER_NODE_LIST != match_testcases[n].type ?
                 (char *)match_testcases[n].param : "<keyword list>"),
                (CPARSER_OK == result ? "OK" : "NOT OK"),
                (is_complete ? "COMPLETE" : "INCOMPLETE"));
     }
-    printf("Match function tests: %d total. %d passed.\n\n\n", 
+    printf("Match function tests: %d total. %d passed.\n\n\n",
            num_tests, num_passes);
     total_tests = num_tests;
     total_passes = num_passes;
 
-    /* 
-     * Test the get functions. Due to the output argument of each 
+    /*
+     * Test the get functions. Due to the output argument of each
      * function being different. There is no table to simplify this.
      */
     num_tests = num_passes = 0;
@@ -254,14 +254,14 @@ int main (int argc, char *argv[])
         SET_TOKEN(token, get_uint_testcases[n].str);
         result = cparser_get_uint(&token, &uint_val);
         num_tests++;
-        if ((result != get_uint_testcases[n].result) || 
+        if ((result != get_uint_testcases[n].result) ||
             (uint_val != get_uint_testcases[n].val)) {
             printf("FAIL: %s: ", get_uint_testcases[n].name);
         } else {
             printf("PASS: %s: ", get_uint_testcases[n].name);
             num_passes++;
         }
-        printf("%s -> %lu (%lX)\n", get_uint_testcases[n].str, 
+        printf("%s -> %lu (%lX)\n", get_uint_testcases[n].str,
                (unsigned long)uint_val, (unsigned long)uint_val);
     }
 
@@ -279,9 +279,9 @@ int main (int argc, char *argv[])
         { "UINT64_06", "00000000000001234", CPARSER_OK, 1234 },
         { "UINT64_07", "0", CPARSER_OK, 0 },
         { "UINT64_08", "0x0", CPARSER_OK, 0 },
-        { "UINT64_09", "18446744073709551615", CPARSER_OK, 
+        { "UINT64_09", "18446744073709551615", CPARSER_OK,
           18446744073709551615ULL },
-        { "UINT64_10", "0xffffffffffffffff", CPARSER_OK, 
+        { "UINT64_10", "0xffffffffffffffff", CPARSER_OK,
           18446744073709551615ULL },
     };
     uint64_t uint64_val;
@@ -289,14 +289,14 @@ int main (int argc, char *argv[])
         SET_TOKEN(token, get_uint64_testcases[n].str);
         result = cparser_get_uint64(&token, &uint64_val);
         num_tests++;
-        if ((result != get_uint64_testcases[n].result) || 
+        if ((result != get_uint64_testcases[n].result) ||
             (uint64_val != get_uint64_testcases[n].val)) {
             printf("FAIL: %s: ", get_uint64_testcases[n].name);
         } else {
             printf("PASS: %s: ", get_uint64_testcases[n].name);
             num_passes++;
         }
-        printf("%s -> %llu (%llX)\n", get_uint64_testcases[n].str, 
+        printf("%s -> %llu (%llX)\n", get_uint64_testcases[n].str,
                (unsigned long long)uint64_val, (unsigned long long)uint64_val);
     }
 
@@ -324,7 +324,7 @@ int main (int argc, char *argv[])
         SET_TOKEN(token, get_int_testcases[n].str);
         result = cparser_get_int(&token, &int_val);
         num_tests++;
-        if ((result != get_int_testcases[n].result) || 
+        if ((result != get_int_testcases[n].result) ||
             (int_val != get_int_testcases[n].val)) {
             printf("FAIL: %s: ", get_int_testcases[n].name);
         } else {
@@ -357,7 +357,7 @@ int main (int argc, char *argv[])
         SET_TOKEN(token, get_int64_testcases[n].str);
         result = cparser_get_int64(&token, &int64_val);
         num_tests++;
-        if ((result != get_int64_testcases[n].result) || 
+        if ((result != get_int64_testcases[n].result) ||
             (int64_val != get_int64_testcases[n].val)) {
             printf("FAIL: %s: ", get_int64_testcases[n].name);
         } else {
@@ -382,14 +382,14 @@ int main (int argc, char *argv[])
         SET_TOKEN(token, get_hex_testcases[n].str);
         result = cparser_get_hex(&token, &uint_val);
         num_tests++;
-        if ((result != get_hex_testcases[n].result) || 
+        if ((result != get_hex_testcases[n].result) ||
             (uint_val != get_hex_testcases[n].val)) {
             printf("FAIL: %s: ", get_hex_testcases[n].name);
         } else {
             printf("PASS: %s: ", get_hex_testcases[n].name);
             num_passes++;
         }
-        printf("%s -> %lX\n", get_hex_testcases[n].str, 
+        printf("%s -> %lX\n", get_hex_testcases[n].str,
                (unsigned long)uint_val);
     }
 
@@ -407,14 +407,14 @@ int main (int argc, char *argv[])
         SET_TOKEN(token, get_hex64_testcases[n].str);
         result = cparser_get_hex64(&token, &uint64_val);
         num_tests++;
-        if ((result != get_hex64_testcases[n].result) || 
+        if ((result != get_hex64_testcases[n].result) ||
             (uint64_val != get_hex64_testcases[n].val)) {
             printf("FAIL: %s: ", get_hex64_testcases[n].name);
         } else {
             printf("PASS: %s: ", get_hex64_testcases[n].name);
             num_passes++;
         }
-        printf("%s -> %llX\n", get_hex64_testcases[n].str, 
+        printf("%s -> %llX\n", get_hex64_testcases[n].str,
                (unsigned long long)uint64_val);
     }
 
@@ -427,9 +427,9 @@ int main (int argc, char *argv[])
         cparser_result_t result;
         uint8_t          macaddr[6];
     } get_macaddr_testcases[] = {
-        { "MAC01", "12:45:89:ab:CD:Ef", CPARSER_OK, 
+        { "MAC01", "12:45:89:ab:CD:Ef", CPARSER_OK,
           { 0x12, 0x45, 0x89, 0xab, 0xcd, 0xef } },
-        { "MAC02", "1:4:9:a:C:f", CPARSER_OK, 
+        { "MAC02", "1:4:9:a:C:f", CPARSER_OK,
           { 0x01, 0x04, 0x09, 0x0a, 0x0c, 0x0f } },
     };
     cparser_macaddr_t macaddr;
@@ -437,16 +437,16 @@ int main (int argc, char *argv[])
         SET_TOKEN(token, get_macaddr_testcases[n].str);
         result = cparser_get_macaddr(&token, &macaddr);
         num_tests++;
-        if ((result != get_macaddr_testcases[n].result) || 
+        if ((result != get_macaddr_testcases[n].result) ||
             (memcmp(&macaddr, get_macaddr_testcases[n].macaddr, 6))) {
             printf("FAIL: %s: ", get_macaddr_testcases[n].name);
         } else {
             printf("PASS: %s: ", get_macaddr_testcases[n].name);
             num_passes++;
         }
-        printf("%s -> %02X:%02X:%02X:%02X:%02X:%02X\n", 
-               get_macaddr_testcases[n].str, macaddr.octet[0], 
-               macaddr.octet[1], macaddr.octet[2], macaddr.octet[3], 
+        printf("%s -> %02X:%02X:%02X:%02X:%02X:%02X\n",
+               get_macaddr_testcases[n].str, macaddr.octet[0],
+               macaddr.octet[1], macaddr.octet[2], macaddr.octet[3],
                macaddr.octet[4], macaddr.octet[5]);
     }
 
@@ -465,15 +465,15 @@ int main (int argc, char *argv[])
         SET_TOKEN(token, get_ipv4addr_testcases[n].str);
         result = cparser_get_ipv4addr(&token, &ipv4addr);
         num_tests++;
-        if ((result != get_ipv4addr_testcases[n].result) || 
+        if ((result != get_ipv4addr_testcases[n].result) ||
             (memcmp(&ipv4addr, &get_ipv4addr_testcases[n].ipv4addr, 4))) {
             printf("FAIL: %s: ", get_ipv4addr_testcases[n].name);
         } else {
             printf("PASS: %s: ", get_ipv4addr_testcases[n].name);
             num_passes++;
         }
-        printf("%s -> %d.%d.%d.%d\n", get_ipv4addr_testcases[n].str, 
-               (int)(ipv4addr >> 24) & 0xff, (int)(ipv4addr >> 16) & 0xff, 
+        printf("%s -> %d.%d.%d.%d\n", get_ipv4addr_testcases[n].str,
+               (int)(ipv4addr >> 24) & 0xff, (int)(ipv4addr >> 16) & 0xff,
                (int)(ipv4addr >> 8) & 0xff, (int)ipv4addr & 0xff);
     }
 
@@ -492,26 +492,27 @@ int main (int argc, char *argv[])
         SET_TOKEN(token, get_file_testcases[n].str);
         result = cparser_get_file(&token, &file);
         num_tests++;
-        if ((result != get_file_testcases[n].result) || 
-            ((CPARSER_OK == result) && 
+        if ((result != get_file_testcases[n].result) ||
+            ((CPARSER_OK == result) &&
              strcmp(file, get_file_testcases[n].str))) {
             printf("FAIL: %s: ", get_file_testcases[n].name);
         } else {
             printf("PASS: %s: ", get_file_testcases[n].name);
             num_passes++;
         }
-        printf("%s -> %s\n", get_file_testcases[n].str, 
+        printf("%s -> %s\n", get_file_testcases[n].str,
                (CPARSER_OK == result ? "OK" : "NOT OK"));
     }
 
     /* Keyword list */
-    
-    printf("Get function tests: %d total. %d passed.\n\n", 
+
+    printf("Get function tests: %d total. %d passed.\n\n",
            num_tests, num_passes);
 
     total_tests += num_tests;
     total_passes += num_passes;
     printf("Total=%d  Passed=%d  Failed=%d\n", total_tests,
            total_passes, total_tests - total_passes);
-    return 0;
+
+    return total_tests - total_passes;
 }

@@ -1,8 +1,8 @@
 /**
  * \file     test_fsm.c
  * \brief    Test program for verifying parser FSM.
- * \details  There are three states - WHITESPACE, TOKEN, ERROR and three 
- *           types of inputs CHARACTER, ERASE and SPACE. The following 
+ * \details  There are three states - WHITESPACE, TOKEN, ERROR and three
+ *           types of inputs CHARACTER, ERASE and SPACE. The following
  *           is a complete list of state transition.
  *
  *            1. (WHITESPACE, SPACE) -> WHITESPACE
@@ -62,7 +62,7 @@
 #include "cparser_tree.h"
 #include "cparser_io.h"
 
-/** 
+/**
  * \brief    Function pointer for a test.
  */
 typedef int (*test_fn_t)(void);
@@ -99,7 +99,7 @@ test_init_parser (cparser_t *parser)
  *
  * \return   1 if succeeded; 0 if failed.
  */
-static int 
+static int
 test_input (cparser_t *parser, const char *input)
 {
     cparser_result_t rc;
@@ -156,19 +156,19 @@ test_state_transition (const char *input, const cparser_state_t final_state,
             printf("ERROR: Token %d parent pointer mismatch.\n", n);
             return 0;
         }
-        if (tokens[n].token_len && 
+        if (tokens[n].token_len &&
             strcmp(tokens[n].buf, parser.tokens[n].buf)) {
             printf("ERROR: Token %d buffer mismatch.\n", n);
             return 0;
         }
     }
     if (current_pos != parser.current_pos) {
-        printf("ERROR: Current position is incorrect (expect:%d  got:%d).\n", 
+        printf("ERROR: Current position is incorrect (expect:%d  got:%d).\n",
                current_pos, parser.current_pos);
         return 0;
     }
     if (last_good != parser.last_good) {
-        printf("ERROR: Last good position is incorrect (expect:%d  got:%d).\n", 
+        printf("ERROR: Last good position is incorrect (expect:%d  got:%d).\n",
                last_good, parser.last_good);
         return 0;
     }
@@ -178,33 +178,33 @@ test_state_transition (const char *input, const cparser_state_t final_state,
 /**
  * Get a SPACE in WHITESPACE state. We should end in WHITESPACE and
  * the token stack should be completely empty.
- */ 
-static int 
+ */
+static int
 test_whitespace_space_whitespace (void)
 {
     cparser_token_t token = { -1, 0, "", NULL };
-    return test_state_transition("     ", CPARSER_STATE_WHITESPACE, 0, 
+    return test_state_transition("     ", CPARSER_STATE_WHITESPACE, 0,
                                  &token, 5, 4);
 }
 
 /**
- * Get a character that is part of a command in WHITESPACE state. 
+ * Get a character that is part of a command in WHITESPACE state.
  * We should end up in TOKEN. There should be one partially complete token.
  */
 int
 test_whitespace_char_token (void)
 {
     cparser_token_t token = { 1, 1, "s", NULL };
-    return test_state_transition(" s", CPARSER_STATE_TOKEN, 0, 
+    return test_state_transition(" s", CPARSER_STATE_TOKEN, 0,
                                  &token, 2, 1);
 }
 
 /**
- * Get characters from characters of a valid command in TOKEN state. 
- * We should end up in TOKEN again. There should be one partially 
+ * Get characters from characters of a valid command in TOKEN state.
+ * We should end up in TOKEN again. There should be one partially
  * complete token.
  */
-int 
+int
 test_token_char_token (void)
 {
     cparser_token_t token = { 2, 4, "show", NULL };
@@ -213,7 +213,7 @@ test_token_char_token (void)
 }
 
 /**
- * Get a SPACE in TOKEN with a unique matched keyword. We should end 
+ * Get a SPACE in TOKEN with a unique matched keyword. We should end
  * up in WHITESPACE again. There should be one complete token.
  */
 int
@@ -221,7 +221,7 @@ test_token_space_whitespace (void)
 {
     cparser_token_t tokens[2] = { { 0, 4, "show", &cparser_root },
                                   { -1, 0, "", NULL } };
-    return test_state_transition("show ", CPARSER_STATE_WHITESPACE, 1, 
+    return test_state_transition("show ", CPARSER_STATE_WHITESPACE, 1,
                                  tokens, 5, 4);
 }
 
@@ -229,7 +229,7 @@ test_token_space_whitespace (void)
  * Get a character that does not match any commands in WHITEPSACE. We should
  * end up in ERROR. Token stack should be empty.
  */
-int 
+int
 test_whitespace_char_error (void)
 {
     cparser_token_t token = { -1, 0, "", NULL };
@@ -238,7 +238,7 @@ test_whitespace_char_error (void)
 }
 
 /**
- * Get an invalid character in TOKEN. We should end up in ERROR. Token 
+ * Get an invalid character in TOKEN. We should end up in ERROR. Token
  * stack should have a partial token.
  */
 int
@@ -272,7 +272,7 @@ test_error_space_error (void)
 /**
  * Get a character in ERROR. Token stack should be empty. We shuld stay in ERROR.
  */
-int 
+int
 test_error_char_error (void)
 {
     cparser_token_t token = { -1, 0, "", NULL };
@@ -282,7 +282,7 @@ test_error_char_error (void)
 /**
  * Insert 2 spaces and erase one. Token stack should be empty.
  */
-int 
+int
 test_whitespace_erase_whitespace (void)
 {
     cparser_token_t token = { -1, 0, "", NULL };
@@ -293,7 +293,7 @@ test_whitespace_erase_whitespace (void)
  * Insert a valid token (CHARs) and one SPACE and then erase one SPACE.
  * Token stack should have one incomplete token.
  */
-int 
+int
 test_whitespace_erase_token (void)
 {
     cparser_token_t token = { 0, 4, "show", NULL };
@@ -301,7 +301,7 @@ test_whitespace_erase_token (void)
 }
 
 /**
- * Insert a valid token and erase one CHAR. Token should have one 
+ * Insert a valid token and erase one CHAR. Token should have one
  * incomplete token.
  */
 int
@@ -343,7 +343,7 @@ test_error_erase_whitespace (void)
     return test_state_transition("show x\b", CPARSER_STATE_WHITESPACE, 1, token2, 5, 4);
 }
 
-int 
+int
 test_error_erase_token (void)
 {
     cparser_token_t token = { 0, 2, "sh", NULL };
@@ -370,7 +370,7 @@ main (int argc, char *argv[])
         { "(TOKEN,      SPACE) -> ERROR", test_token_space_error },
         { "(ERROR,      SPACE) -> ERROR", test_error_space_error },
         { "(ERROR,      CHAR)  -> ERROR", test_error_char_error },
-        
+
         /* These are transitions involved in erase */
         { "(WHITESPACE, ERASE) -> WHITESPACE", test_whitespace_erase_whitespace },
         { "(WHITESPACE, ERASE) -> TOKEN", test_whitespace_erase_token },
@@ -392,5 +392,6 @@ main (int argc, char *argv[])
 
     printf("Total=%d  Passed=%d  Failed=%d\n", num_passed + num_failed,
            num_passed, num_failed);
-    return 0;
+
+    return num_failed;
 }

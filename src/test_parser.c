@@ -1,7 +1,7 @@
 /**
  * \file     test_parser.c
- * \brief    Test program for parser library. 
- * \details  This is a test program with a simple CLI that serves as a demo 
+ * \brief    Test program for parser library.
+ * \details  This is a test program with a simple CLI that serves as a demo
  *           as well.
  * \version  \verbatim $Id: test_parser.c 159 2011-10-29 09:29:58Z henry $ \endverbatim
  */
@@ -50,7 +50,7 @@ extern int interactive;
 int num_passed = 0, num_failed =0;
 
 /**
- * Feed a string into the parser (skipping line buffering) 
+ * Feed a string into the parser (skipping line buffering)
  */
 static void
 feed_parser (cparser_t *parser, const char *str)
@@ -63,7 +63,7 @@ feed_parser (cparser_t *parser, const char *str)
 }
 
 /**
- * Update pass/fail counters and display a status string 
+ * Update pass/fail counters and display a status string
  */
 static void
 update_result (char *got, const char *expected, const char *test)
@@ -74,7 +74,7 @@ update_result (char *got, const char *expected, const char *test)
     if (failed) {
         for (n = 0; n < strlen(expected); n++) {
             if (got[n] != expected[n]) {
-                printf("Index %d: expected=%c  got=%c\n", n, expected[n], 
+                printf("Index %d: expected=%c  got=%c\n", n, expected[n],
                        got[n]);
             }
         }
@@ -138,8 +138,8 @@ main (int argc, char *argv[])
 
     parser.cfg.root = &cparser_root;
     parser.cfg.ch_complete = '\t';
-    /* 
-     * Instead of making sure the terminal setting of the target and 
+    /*
+     * Instead of making sure the terminal setting of the target and
      * the host are the same. ch_erase and ch_del both are treated
      * as backspace.
      */
@@ -153,7 +153,7 @@ main (int argc, char *argv[])
 
     if (CPARSER_OK != cparser_init(&parser.cfg, &parser)) {
         printf("Fail to initialize parser.\n");
-	return -1;
+        return -1;
     }
     if (interactive) {
         if (config_file) {
@@ -209,15 +209,15 @@ main (int argc, char *argv[])
 
         BZERO_OUTPUT;
         feed_parser(&parser, "show employees-by-id 0x0 0x1\n");
-        update_result(output, 
-                      "bob\n   ID: 0x00000001\n   Height:  70\"   Weight: 165 lbs.\n", 
+        update_result(output,
+                      "bob\n   ID: 0x00000001\n   Height:  70\"   Weight: 165 lbs.\n",
                       "prefixing commands");
-        
+
         /* Test optional parameters */
         BZERO_OUTPUT;
         feed_parser(&parser, "show employees-by-id 0x0\n");
-        update_result(output, 
-                      "bob\n   ID: 0x00000001\n   Height:  70\"   Weight: 165 lbs.\n" 
+        update_result(output,
+                      "bob\n   ID: 0x00000001\n   Height:  70\"   Weight: 165 lbs.\n"
                       "john\n   ID: 0x00000003\n   Height:  80\"   Weight: 220 lbs.\n",
                       "optional parameter");
 
@@ -232,8 +232,8 @@ main (int argc, char *argv[])
         }
         if (CPARSER_OK == rc) {
             feed_parser(&parser, "\b\bow\n");
-            update_result(output, 
-                          "bob\n   ID: 0x00000001\n   Height:  70\"   Weight: 165 lbs.\n" 
+            update_result(output,
+                          "bob\n   ID: 0x00000001\n   Height:  70\"   Weight: 165 lbs.\n"
                           "john\n   ID: 0x00000003\n   Height:  80\"   Weight: 220 lbs.\n",
                           "left arrow #1");
         } else {
@@ -257,7 +257,7 @@ main (int argc, char *argv[])
             fflush(stdout);
             num_failed++;
         }
-        
+
         /* Test right arrow key */
         BZERO_OUTPUT;
         feed_parser(&parser, "shaw employees-by-id 0x0");
@@ -281,8 +281,8 @@ main (int argc, char *argv[])
         }
         if (CPARSER_OK == rc) {
             feed_parser(&parser, " 0x1\n");
-            update_result(output, 
-                      "bob\n   ID: 0x00000001\n   Height:  70\"   Weight: 165 lbs.\n", 
+            update_result(output,
+                      "bob\n   ID: 0x00000001\n   Height:  70\"   Weight: 165 lbs.\n",
                       "right arrow #1");
         }
 
@@ -307,7 +307,7 @@ main (int argc, char *argv[])
         }
         if (CPARSER_OK == rc) {
             feed_parser(&parser, "\n");
-            update_result(output, 
+            update_result(output,
                           "john\n   ID: 0x00000003\n   Height:  80\"   Weight: 220 lbs.\n",
                           "right arrow #2");
         }
@@ -318,7 +318,7 @@ main (int argc, char *argv[])
 
         BZERO_OUTPUT;
         feed_parser(&parser, "s?");
-        update_result(output, "s\nshow\nsave\nTEST>> s", 
+        update_result(output, "s\nshow\nsave\nTEST>> s",
                       "context-sensitive help #1");
 
         /* Reset the output buffer */
@@ -326,7 +326,7 @@ main (int argc, char *argv[])
         BZERO_OUTPUT;
 
         feed_parser(&parser, "s\t");
-        update_result(output, "s\nshow\nsave\nTEST>> s", 
+        update_result(output, "s\nshow\nsave\nTEST>> s",
                       "context-sensitive help #2");
 
         /* Test incomplete commands */
@@ -338,13 +338,13 @@ main (int argc, char *argv[])
 
         BZERO_OUTPUT;
         feed_parser(&parser, "show \n");
-        update_result(output, 
+        update_result(output,
                       "show \n            ^Incomplete command\nTEST>> ",
                       "Incomplete command #2");
 
         BZERO_OUTPUT;
         feed_parser(&parser, "show em\n");
-        update_result(output, 
+        update_result(output,
                       "show em\n              ^Incomplete command\nTEST>> ",
                       "Incomplete command #3");
 
@@ -359,8 +359,8 @@ main (int argc, char *argv[])
         feed_parser(&parser, "show xyz\n");
         update_result(output, "show xyz\n            ^Parse error\nTEST>> ",
                       "Invalid command #2");
-        
-        /* 
+
+        /*
          * Test cparser_help_cmd() with and without a filter string.
          * This implicitly tests cparser_walk() as well.
          */
@@ -392,5 +392,6 @@ main (int argc, char *argv[])
         printf("Total=%d  Passed=%d  Failed=%d\n", num_passed + num_failed,
                num_passed, num_failed);
     }
-    return 0;
+
+    return num_failed;
 }

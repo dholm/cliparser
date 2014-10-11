@@ -33,8 +33,8 @@
 #     * Redistributions in binary form must reproduce the above copyright
 #       notice, this list of conditions and the following disclaimer in the
 #       documentation and/or other materials provided with the distribution.
-#     * Neither the name of the project nor the names of its contributors 
-#       may be used to endorse or promote products derived from this software 
+#     * Neither the name of the project nor the names of its contributors
+#       may be used to endorse or promote products derived from this software
 #       without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY HENRY KWOK ''AS IS'' AND ANY
@@ -82,14 +82,15 @@ bin: $(BUILDDIR) $(DIR_LIST)
 
 all: bin $(TEST_LIST)
 
-NIGHTLY_DIR = ./scripts/nightly
-NIGHTLY_UNIT_TEST = env PYTHONPATH=$(NIGHTLY_DIR)/sql_driver $(NIGHTLY_DIR)/unit_tests/nightly_run.py
-
 tests: all
-	$(NIGHTLY_UNIT_TEST) --bin-dir=$(BUILDDIR)/bin $(notdir $(TEST_LIST))
-
-tests_logged: all
-	$(NIGHTLY_UNIT_TEST) --user=root --project=CLI_Parser --target=$(PLATFORM) --bin-dir=$(BUILDDIR)/bin $(TEST_LIST)
+	@for testcase in ${TEST_LIST}; do \
+		echo "Running $$(basename $${testcase}).."; \
+		${BUILDDIR}/bin/$$(basename $${testcase}); \
+		if [[ $${?} -ne 0 ]]; then \
+			exit 1; \
+		fi; \
+		echo; \
+	done
 
 clean: $(CLEAN_LIST)
 	@echo "CLEAN $(notdir $(BUILDDIR))"
